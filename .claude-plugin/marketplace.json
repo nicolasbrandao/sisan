@@ -1,0 +1,14 @@
+{
+  "name": "sisan-plugins",
+  "description": "Sisan multi-agent development workflow plugins",
+  "plugins": [
+    {
+      "name": "sisan",
+      "description": "Multi-agent development team with tiered workflows for patches, minor features, and major changes",
+      "source": {
+        "source": "github",
+        "repo": "nicolasbrandao/sisan"
+      }
+    }
+  ]
+}
