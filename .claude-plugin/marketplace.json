@@ -1,6 +1,10 @@
 {
   "name": "sisan-plugins",
   "description": "Sisan multi-agent development workflow plugins",
+  "owner": {
+    "name": "Nicolas Brandao",
+    "url": "https://github.com/nicolasbrandao"
+  },
   "plugins": [
     {
       "name": "sisan",
