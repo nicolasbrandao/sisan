@@ -223,14 +223,22 @@ This workflow handles small features, enhancements, refactors, new API endpoints
    - Ensure `{SPEC_FOLDER}/04-implementation-summary.md` has a consolidated summary of all PRs.
    - Ensure `{SPEC_FOLDER}/04-test-report.md` has a consolidated report of all test results.
 
-5. **Read both output documents.**
+5. **Cross-review round** — Launch two agents in parallel:
 
-6. **Present results to the user**:
+   a. **`software-engineer` in IMPLEMENTATION mode (cross-review)**:
+   - Prompt: "You are completing a cross-review. Read the QA Engineer's test report at `{SPEC_FOLDER}/04-test-report.md`. Then read your own implementation summary at `{SPEC_FOLDER}/04-implementation-summary.md`. Append a '## Cross-Review Notes' section to your document at `{SPEC_FOLDER}/04-implementation-summary.md` with your observations about whether the tests align with what was implemented, any interface assumptions in the tests that differ from reality, and any concerns."
+
+   b. **`qa-engineer` in IMPLEMENTATION mode (cross-review)**:
+   - Prompt: "You are completing a cross-review. Read the Software Engineer's implementation summary at `{SPEC_FOLDER}/04-implementation-summary.md`. Then read your own test report at `{SPEC_FOLDER}/04-test-report.md`. Append a '## Cross-Review Notes' section to your document at `{SPEC_FOLDER}/04-test-report.md` with your observations about whether the implementation matches what the tests assume, any deviations from plan that affect test correctness, and any concerns."
+
+6. **Read both output documents.**
+
+7. **Present results to the user**:
    - Per-PR summary: files changed, tests written, deviations from plan
    - Consolidated: total files changed, total tests, overall test results
    - Highlight any failures or concerns
 
-7. **User checkpoint**: Ask the user to review and proceed to quality gates.
+8. **User checkpoint**: Ask the user to review and proceed to quality gates.
    - If there are test failures, discuss with the user before proceeding.
 
 ---
