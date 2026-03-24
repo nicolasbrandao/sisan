@@ -158,16 +158,19 @@ This workflow handles bug fixes, hotfixes, typos, config changes, and small isol
 2. **After QA completes, launch `software-engineer` in QUALITY GATE mode**:
    - Prompt: "You are in QUALITY GATE mode (test review). Read the test report at `{SPEC_FOLDER}/04-test-report.md` and review the actual test code. Assess test correctness, coverage adequacy, and test quality. Append your '## Software Engineer - Test Quality Review' section to the quality gate report at `{SPEC_FOLDER}/05-quality-gate.md`."
 
-3. **Read the quality gate report.**
+3. **After SE completes, launch `qa-engineer` in QUALITY GATE mode (final reflection)**:
+   - Prompt: "You are completing a final reflection. Read the full quality gate report at `{SPEC_FOLDER}/05-quality-gate.md`, including the Software Engineer's '## Software Engineer - Test Quality Review' section. Append a '## QA Engineer - Final Reflection' section to `{SPEC_FOLDER}/05-quality-gate.md` acknowledging the SE's test quality findings, noting any updates to your assessment warranted by the SE's observations, and confirming or revising your overall verdict."
 
-4. **Present results to the user**:
+4. **Read the quality gate report.**
+
+5. **Present results to the user**:
    - QA verdict: APPROVED / APPROVED WITH CONDITIONS / REJECTED
    - Acceptance criteria results (PASS/FAIL per criterion)
    - Any blockers or conditions
    - SE's test quality assessment
    - Overall recommendation
 
-5. **Handle the verdict**:
+6. **Handle the verdict**:
 
    a. **APPROVED**: Proceed to Phase 6 (Merge).
 
