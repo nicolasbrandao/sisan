@@ -126,14 +126,22 @@ This workflow handles bug fixes, hotfixes, typos, config changes, and small isol
 4. **After SE completes, launch `qa-engineer` in IMPLEMENTATION mode** (or in parallel if determined safe in step 2):
    - Prompt: "You are in IMPLEMENTATION mode. Read your test plan at `{SPEC_FOLDER}/03-plan-qa.md`, the specification at `{SPEC_FOLDER}/01-spec.md`, and the SE's implementation summary at `{SPEC_FOLDER}/04-implementation-summary.md`. Implement the tests following your plan. Follow the project's test conventions exactly. Run the full test suite after writing tests. Write your test report to `{SPEC_FOLDER}/04-test-report.md`."
 
-5. **Read both output documents.**
+5. **Cross-review round** - Launch two agents in parallel:
 
-6. **Present results to the user**:
+   a. **`software-engineer` in IMPLEMENTATION mode (cross-review)**:
+   - Prompt: "You are completing a cross-review. Read the QA Engineer's test report at `{SPEC_FOLDER}/04-test-report.md`. Then read your own implementation summary at `{SPEC_FOLDER}/04-implementation-summary.md`. Append a '## Cross-Review Notes' section to your document at `{SPEC_FOLDER}/04-implementation-summary.md` with your observations about whether the tests align with what was implemented, any interface assumptions in the tests that differ from reality, and any concerns."
+
+   b. **`qa-engineer` in IMPLEMENTATION mode (cross-review)**:
+   - Prompt: "You are completing a cross-review. Read the Software Engineer's implementation summary at `{SPEC_FOLDER}/04-implementation-summary.md`. Then read your own test report at `{SPEC_FOLDER}/04-test-report.md`. Append a '## Cross-Review Notes' section to your document at `{SPEC_FOLDER}/04-test-report.md` with your observations about whether the implementation matches what the tests assume, any deviations from plan that affect test correctness, and any concerns."
+
+6. **Read both output documents.**
+
+7. **Present results to the user**:
    - SE: files changed, any deviations from plan
    - QA: tests written, test results (pass/fail counts)
    - Highlight any failures or concerns
 
-7. **User checkpoint**: Ask the user to review and proceed to quality gates.
+8. **User checkpoint**: Ask the user to review and proceed to quality gates.
    - If there are test failures, discuss with the user before proceeding.
 
 ---
