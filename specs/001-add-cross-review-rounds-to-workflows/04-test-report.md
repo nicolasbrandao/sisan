@@ -433,3 +433,35 @@ PR 1 scope items (AC-1, AC-2, and AC-9/AC-10 for patch.md Phase 4 and minor.md) 
 ## Deviations from Plan
 
 No deviations from the test plan were necessary. All checks in the PR 2 scope were executed as planned and all passed. The `04-implementation-summary.md` contained exactly the changes described in the PR 2 section of that document, with no undocumented modifications and no deviations from the SE's stated plan.
+
+---
+
+## Cross-Review Notes
+
+### Implementation matches test assumptions
+
+The SE's implementation summary is precise and accurate. Every structural claim the SE makes in the Testing Notes section of `04-implementation-summary.md` was independently verified by the test report checks, and all 37 checks passed. Specifically:
+
+- Step 3 in Phase 1.9 is present with sub-items `a.` and `b.`; SA reads `01-spec-infra-review.md` first; DevOps reads `01-spec-arch-review.md` first; `**Track activation status**` paragraph immediately follows as unnumbered prose — all confirmed by V-7.1, V-7.2, V-4.9, V-4.10, V-NUM.4, EC-2.
+- Phase 4 step 5 is present with sub-items `a.` through `d.`; sub-items `c.` and `d.` carry `(only if activated)`; former step 5 is now step 6; former step 6 is now step 7 — all confirmed by V-3.1 through V-3.3, V-NUM.5, V-10.5.
+- Phase 5 of `patch.md` step 3 uses "After SE completes..."; steps 4, 5, 6 are the renumbered former steps 3, 4, 5 — confirmed by V-6.1, V-6.2, V-NUM.2.
+- All new prompts open with `"You are completing a cross-review."` or `"You are completing a final reflection."` — confirmed by V-4.5 through V-4.11 and V-6.3.
+- `major.md` uses em-dash and `patch.md` Phase 5 step 3 is sequential — confirmed by V-9.4 and V-9.2.
+
+No interface assumptions in the tests differ from the reality of what was implemented. There are no deviations from the SE's stated plan that affect test correctness.
+
+### Deviation in PR scope not present in this spec
+
+The SE's implementation summary covers only PR 2. The test report similarly covers only PR 2, with a brief acknowledgement that PR 1 results are from a prior session and are not re-validated here. This is a consistent and intentional scoping — both documents are aligned on this boundary. There is no mismatch.
+
+### The two `## Cross-Review Notes` sections on `04-implementation-summary.md`
+
+The SE's implementation summary notes that sub-items `c.` and `d.` of Phase 4 step 5 in `major.md` instruct SA and DevOps to each append a `## Cross-Review Notes` section to `04-implementation-summary.md`. This means that document will accumulate two `## Cross-Review Notes` sections from two different agents (SE from sub-item `a.`, SA from sub-item `c.`). The test report's V-4.7 check specifically verifies and records this as intentional and not a defect. The SE's implementation summary does not flag it as a concern either. Both documents are fully aligned on this point.
+
+### One minor observation: the current cross-review is itself an instance of the feature being tested
+
+This cross-review session (QA appending `## Cross-Review Notes` to `04-test-report.md` after reading `04-implementation-summary.md`) is executed according to the Phase 4 step 5b prompt in `major.md`. That prompt is precisely the one verified by check V-4.6. The fact that this session is following that prompt correctly confirms the prompt is actionable and the workflow step is coherent. No concerns.
+
+### No concerns
+
+The implementation is complete, accurate, and consistent with the test report. All test assumptions are grounded in the actual file content. No deviations from plan affect test correctness. No regression risk was introduced by the changes to `major.md` or `patch.md`.
