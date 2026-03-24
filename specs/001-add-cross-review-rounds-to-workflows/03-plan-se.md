@@ -176,7 +176,7 @@ The two architectural decisions flagged in discovery are resolved as follows, pe
   - Current `5. **Present results**: Per-phase summary, per-PR summary, consolidated totals.` → `6. **Present results**: Per-phase summary, per-PR summary, consolidated totals.`
   - Current `6. **User checkpoint**.` → `7. **User checkpoint**.`
 
-  **Conditionality**: SA and DevOps sub-items are labelled `(only if DevOps is active)`, matching the exact conditional language used for DevOps participation in Phase 4 step 3d (`(for infra PRs, only if activated)`) and Phase 2 step 3e (`(only if activated)`). The label `(only if DevOps is active)` is preferred here for clarity, as it names the condition explicitly at the cross-review step level (unlike the Phase 4 loop where the block-level context already implies it). Note: either `(only if DevOps is active)` or `(only if activated)` is acceptable; check the Phase 2 major.md pattern and use exact matching phrasing `(only if activated)` if consistency is preferred.
+  **Conditionality**: SA and DevOps sub-items are labelled `(only if activated)`, matching the exact conditional language used throughout `major.md` (e.g., Phase 2 step 3e). Updated per TL planning review requirement — `(only if activated)` is the definitive label for consistency with the rest of the file.
 
   **SA document target**: SA appends to `04-implementation-summary.md`, not to a separate SA document, because the SA has no `04-*` output file. This follows the TL's recommendation and the symmetry of the SE↔QA sub-items in the same step.
 
