@@ -1,0 +1,13 @@
+{
+  "extraKnownMarketplaces": {
+    "sisan-plugins": {
+      "source": {
+        "source": "github",
+        "repo": "nicolasbrandao/sisan"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "sisan@sisan-plugins": true
+  }
+}
