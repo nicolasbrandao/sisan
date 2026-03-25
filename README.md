@@ -12,9 +12,9 @@ Sisan provides a team of up to 7 specialized AI agents that work together throug
 |------|-----|-------|----------|-----------|--------|--------|
 | **Patch** | 1 | 1-5 | 1 | Work branch → PR to main | PM, SE, QA | Available |
 | **Minor** | 1-3 | 5-15 | 1 | Feature branch + sub-PRs | PM, SE, QA, TL, UI/UX* | Available |
-| **Major** | 4+ | 15+ | 1+ | Epic branch + sub-PRs | PM, SE, QA, TL, SA, UI/UX*, DevOps* | Available |
+| **Major** | 4+ | 15+ | 1+ | Epic branch + sub-PRs | PM, SE, QA, TL, SA, UI/UX*, DevOps*, DBA* | Available |
 
-*UI/UX Specialist and DevOps Engineer are conditionally activated based on spec content.
+*UI/UX Specialist, DevOps Engineer, and Database Architect are conditionally activated based on spec content.
 
 The PM agent triages requests and can recommend **decomposing** larger requests into multiple smaller cycles (e.g., a "minor" request delivered as 3 patch cycles), keeping PRs small and easy to review.
 
@@ -68,8 +68,9 @@ The command will guide you through the entire process interactively.
 | **UI/UX Specialist** | Validates design consistency, accessibility, responsive behavior | Spec Review, Discovery, Quality Gate | Minor*, Major* |
 | **Software Architect** | Reviews system-level architecture, defines API contracts, produces ADRs | Spec Review, Discovery, Planning + Verdict, Quality Gate | Major |
 | **DevOps Engineer** | Plans and implements infrastructure, CI/CD, deployment, monitoring | Spec Review, Discovery, Planning, Implementation, Quality Gate | Major* |
+| **Database Architect** | Schema design, migration safety, query performance, ORM conventions | Spec Review, Discovery, Planning, Implementation, Quality Gate | Minor*, Major* |
 
-*UI/UX Specialist activated when spec has UI changes. DevOps Engineer activated when spec has infrastructure changes.
+*UI/UX Specialist activated when spec has UI changes. DevOps Engineer activated when spec has infrastructure changes. Database Architect activated when spec has database schema or migration changes.
 
 ### Patch Workflow Phases
 
