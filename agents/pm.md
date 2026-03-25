@@ -230,7 +230,7 @@ and how this cycle fits into it. Reference the triage document's delivery breakd
 ## Affected Areas
 - **Files**: [list of files/modules likely to be modified]
 - **APIs**: [any API endpoints affected]
-- **Database**: [any schema or data changes]
+- **Database**: [any schema or data changes — this section triggers Database Architect activation in minor/major workflows. Describe schema, entity, or migration changes clearly. Write "None" if no database changes.]
 - **UI**: [any user-facing changes — this section triggers UI/UX Specialist activation in minor/major workflows. Write "None" if no UI changes.]
 - **Infrastructure**: [any CI/CD, deployment, monitoring, scaling, or environment configuration changes — this section triggers DevOps Engineer activation in major workflows. Write "None" if no infrastructure changes.]
 - **Cross-Service**: [any inter-service communication, shared data, API contracts between services, or message queue changes — this section informs the Software Architect's review depth in major workflows. Write "None" if changes are within a single service.]

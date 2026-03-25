@@ -21,7 +21,7 @@ This workflow handles small features, enhancements, refactors, new API endpoints
 ### Steps:
 
 1. **Launch the `pm` agent in SPECIFICATION mode**:
-   - Prompt: "You are in SPECIFICATION mode. Create a detailed specification for the following request. Explore the codebase to understand the affected area, identify risks, and define precise acceptance criteria. Write the spec to `{SPEC_FOLDER}/01-spec.md`. The workflow tier is `minor` — this is a small feature or enhancement. Be thorough with the 'Affected Areas > UI' section: if any user interface changes are involved, describe them clearly. If there are no UI changes, mark that section as 'None'. The UI section determines whether a UI/UX Specialist will be activated. Also detail the delivery strategy — how many PRs are recommended and what each covers. Request: {USER_REQUEST}. Triage context: {TRIAGE_RESULT}"
+   - Prompt: "You are in SPECIFICATION mode. Create a detailed specification for the following request. Explore the codebase to understand the affected area, identify risks, and define precise acceptance criteria. Write the spec to `{SPEC_FOLDER}/01-spec.md`. The workflow tier is `minor` — this is a small feature or enhancement. Be thorough with the 'Affected Areas > UI' section: if any user interface changes are involved, describe them clearly. If there are no UI changes, mark that section as 'None'. The UI section determines whether a UI/UX Specialist will be activated. Also be thorough with the 'Affected Areas > Database' section: if any schema or data changes are involved, describe them clearly. If there are no database changes, mark that section as 'None'. The Database section determines whether a Database Architect will be activated. Also detail the delivery strategy — how many PRs are recommended and what each covers. Request: {USER_REQUEST}. Triage context: {TRIAGE_RESULT}"
 
 2. **Read the spec**: After the PM agent completes, read `{SPEC_FOLDER}/01-spec.md`.
 
@@ -66,26 +66,59 @@ This workflow handles small features, enhancements, refactors, new API endpoints
 
 ---
 
+## Phase 1.6: Database Spec Review (CONDITIONAL)
+
+**Goal**: Augment the spec with database-specific acceptance criteria, schema requirements, migration safety concerns, and query performance guidance.
+
+### Activation Check:
+
+1. **Read the spec** `{SPEC_FOLDER}/01-spec.md`.
+2. **Check the `Affected Areas > Database` section**:
+   - If the section contains "None", "N/A", or is empty: **SKIP this phase entirely**. Print: "No database changes detected — skipping Database Spec Review." Proceed to Phase 2.
+   - If the section has any content describing database changes: **ACTIVATE the database-architect** and continue with the steps below.
+
+### Steps (only if database-architect is activated):
+
+1. **Launch the `database-architect` agent in SPEC REVIEW mode**:
+   - Prompt: "You are in SPEC REVIEW mode. Read the specification at `{SPEC_FOLDER}/01-spec.md`{if UI/UX active: ' and the UI spec review at `{SPEC_FOLDER}/01-spec-ui-review.md`'}. Explore the codebase to understand the existing database schema, ORM configuration, migration history, entity definitions, and query patterns. Augment the spec with database-specific acceptance criteria, schema change requirements, migration safety concerns, index strategy, and query performance guidance. Write your review to `{SPEC_FOLDER}/01-spec-db-review.md`."
+
+2. **Read the database spec review**: After the database-architect completes, read `{SPEC_FOLDER}/01-spec-db-review.md`.
+
+3. **Present the database-specific criteria to the user**:
+   - Show: schema change requirements, migration safety concerns, index strategy, query performance guidance, additional DB acceptance criteria.
+   - Note: "These database criteria will be treated as requirements for the SE's and database-architect's implementation and QA's validation."
+
+4. **User checkpoint**: Ask the user to approve the augmented requirements.
+   - If changes requested: re-launch the database-architect with feedback, or edit the review directly.
+   - Do not proceed until the user approves.
+
+**Track database-architect activation status**: Remember whether the database-architect was activated. This determines their participation in Phase 2 and Phase 5.
+
+---
+
 ## Phase 2: Discovery
 
 **Goal**: SE, QA, and optionally UI/UX explore the codebase independently. Then the Tech Lead reviews everything from an architectural perspective.
 
 ### Steps:
 
-1. **Launch agents in parallel** (2 or 3 agents depending on UI/UX activation):
+1. **Launch agents in parallel** (2–4 agents depending on conditional activations):
 
    a. **`software-engineer` in DISCOVERY mode**:
-   - Prompt: "You are in DISCOVERY mode. Read the specification at `{SPEC_FOLDER}/01-spec.md`{if UI/UX active: ' and the UI spec review at `{SPEC_FOLDER}/01-spec-ui-review.md`'}. Explore the codebase to understand the affected code paths, identify the root cause or insertion points, map dependencies, and document conventions. Write your findings to `{SPEC_FOLDER}/02-discovery-se.md`."
+   - Prompt: "You are in DISCOVERY mode. Read the specification at `{SPEC_FOLDER}/01-spec.md`{if UI/UX active: ' and the UI spec review at `{SPEC_FOLDER}/01-spec-ui-review.md`'}{if database-architect active: ' and the database spec review at `{SPEC_FOLDER}/01-spec-db-review.md`'}. Explore the codebase to understand the affected code paths, identify the root cause or insertion points, map dependencies, and document conventions. Write your findings to `{SPEC_FOLDER}/02-discovery-se.md`."
 
    b. **`qa-engineer` in DISCOVERY mode**:
-   - Prompt: "You are in DISCOVERY mode. Read the specification at `{SPEC_FOLDER}/01-spec.md`{if UI/UX active: ' and the UI spec review at `{SPEC_FOLDER}/01-spec-ui-review.md`'}. Explore the test infrastructure, identify existing test coverage for the affected area, document test patterns and conventions, and identify coverage gaps. Write your findings to `{SPEC_FOLDER}/02-discovery-qa.md`."
+   - Prompt: "You are in DISCOVERY mode. Read the specification at `{SPEC_FOLDER}/01-spec.md`{if UI/UX active: ' and the UI spec review at `{SPEC_FOLDER}/01-spec-ui-review.md`'}{if database-architect active: ' and the database spec review at `{SPEC_FOLDER}/01-spec-db-review.md`'}. Explore the test infrastructure, identify existing test coverage for the affected area, document test patterns and conventions, and identify coverage gaps. Write your findings to `{SPEC_FOLDER}/02-discovery-qa.md`."
 
    c. **`ui-ux-specialist` in DISCOVERY mode** (only if activated in Phase 1.5):
    - Prompt: "You are in DISCOVERY mode. Read the specification at `{SPEC_FOLDER}/01-spec.md` and your spec review at `{SPEC_FOLDER}/01-spec-ui-review.md`. Map the existing UI architecture of the affected area — component tree, styling patterns, accessibility state, and reusable elements. Write your findings to `{SPEC_FOLDER}/02-discovery-ui.md`."
 
+   d. **`database-architect` in DISCOVERY mode** (only if activated in Phase 1.6):
+   - Prompt: "You are in DISCOVERY mode. Read the specification at `{SPEC_FOLDER}/01-spec.md`, the database spec review at `{SPEC_FOLDER}/01-spec-db-review.md`{if UI/UX active: ', and the UI spec review at `{SPEC_FOLDER}/01-spec-ui-review.md`'}. Map the existing database schema, ORM configuration, migration inventory, query patterns, and index coverage. Write your findings to `{SPEC_FOLDER}/02-discovery-db.md`."
+
 2. **Wait for all agents to complete.**
 
-3. **Cross-review round** — Launch agents in parallel (2 or 3):
+3. **Cross-review round** — Launch agents in parallel (2–4):
 
    a. **`software-engineer` in DISCOVERY mode (cross-review)**:
    - Prompt: "You are completing a cross-review. Read the QA Engineer's discovery at `{SPEC_FOLDER}/02-discovery-qa.md`. Then read your own discovery at `{SPEC_FOLDER}/02-discovery-se.md`. Append a '## Cross-Review Notes' section to your document at `{SPEC_FOLDER}/02-discovery-se.md` with observations about QA findings, alignment or conflicts, and suggestions."
@@ -96,10 +129,13 @@ This workflow handles small features, enhancements, refactors, new API endpoints
    c. **`ui-ux-specialist` in DISCOVERY mode (cross-review)** (only if activated):
    - Prompt: "You are completing a cross-review. Read the Software Engineer's discovery at `{SPEC_FOLDER}/02-discovery-se.md`. Then read your own discovery at `{SPEC_FOLDER}/02-discovery-ui.md`. Append a '## Cross-Review Notes' section to your document at `{SPEC_FOLDER}/02-discovery-ui.md` with observations about the SE's findings and their UI implications."
 
+   d. **`database-architect` in DISCOVERY mode (cross-review)** (only if activated):
+   - Prompt: "You are completing a cross-review. Read the Software Engineer's discovery at `{SPEC_FOLDER}/02-discovery-se.md`. Then read your own discovery at `{SPEC_FOLDER}/02-discovery-db.md`. Append a '## Cross-Review Notes' section to your document at `{SPEC_FOLDER}/02-discovery-db.md` with observations about the SE's findings and their database layer implications."
+
 4. **Wait for cross-reviews to complete.**
 
 5. **Launch `tech-lead` in DISCOVERY REVIEW mode** (sequential — runs AFTER cross-reviews):
-   - Prompt: "You are in DISCOVERY REVIEW mode. Read the specification at `{SPEC_FOLDER}/01-spec.md`{if UI/UX active: ', the UI spec review at `{SPEC_FOLDER}/01-spec-ui-review.md`'}, the SE discovery at `{SPEC_FOLDER}/02-discovery-se.md`, the QA discovery at `{SPEC_FOLDER}/02-discovery-qa.md`{if UI/UX active: ', and the UI/UX discovery at `{SPEC_FOLDER}/02-discovery-ui.md`'}. Assess the architectural implications of this change. Write your findings to `{SPEC_FOLDER}/02-discovery-tl.md`."
+   - Prompt: "You are in DISCOVERY REVIEW mode. Read the specification at `{SPEC_FOLDER}/01-spec.md`{if UI/UX active: ', the UI spec review at `{SPEC_FOLDER}/01-spec-ui-review.md`'}, the SE discovery at `{SPEC_FOLDER}/02-discovery-se.md`, the QA discovery at `{SPEC_FOLDER}/02-discovery-qa.md`{if UI/UX active: ', and the UI/UX discovery at `{SPEC_FOLDER}/02-discovery-ui.md`'}{if database-architect active: ', and the database discovery at `{SPEC_FOLDER}/02-discovery-db.md`'}. Assess the architectural implications of this change. Write your findings to `{SPEC_FOLDER}/02-discovery-tl.md`."
 
 6. **Read all discovery documents** (SE, QA, UI/UX if active, TL).
 
@@ -107,6 +143,7 @@ This workflow handles small features, enhancements, refactors, new API endpoints
    - Key findings from SE: affected files, root cause/insertion points, risks
    - Key findings from QA: test infrastructure, existing coverage, gaps
    - Key findings from UI/UX (if active): component architecture, design system usage, a11y gaps
+   - Key findings from database-architect (if active): schema map, migration inventory, query pattern risks
    - Key findings from TL: architectural concerns, scope assessment, recommendations
    - Highlight: cross-review observations worth noting
    - **If TL recommends re-triage or further decomposition**: present this prominently and ask the user how to proceed.
@@ -121,20 +158,23 @@ This workflow handles small features, enhancements, refactors, new API endpoints
 
 ### Steps:
 
-1. **Launch two agents in parallel**:
+1. **Launch agents in parallel** (2–3 agents depending on database-architect activation):
 
    a. **`software-engineer` in PLANNING mode**:
-   - Prompt: "You are in PLANNING mode. Read all documents: specification at `{SPEC_FOLDER}/01-spec.md`{if UI/UX active: ', UI spec review at `{SPEC_FOLDER}/01-spec-ui-review.md`'}, your discovery at `{SPEC_FOLDER}/02-discovery-se.md`, QA discovery at `{SPEC_FOLDER}/02-discovery-qa.md`{if UI/UX active: ', UI/UX discovery at `{SPEC_FOLDER}/02-discovery-ui.md`'}, and Tech Lead discovery review at `{SPEC_FOLDER}/02-discovery-tl.md`. Create a detailed implementation plan. Pay special attention to the TL's recommendations and address them in your plan. Include a PR Strategy section specifying how many sub-PRs this should be decomposed into and what each covers. Write your plan to `{SPEC_FOLDER}/03-plan-se.md`."
+   - Prompt: "You are in PLANNING mode. Read all documents: specification at `{SPEC_FOLDER}/01-spec.md`{if UI/UX active: ', UI spec review at `{SPEC_FOLDER}/01-spec-ui-review.md`'}{if database-architect active: ', database spec review at `{SPEC_FOLDER}/01-spec-db-review.md`'}, your discovery at `{SPEC_FOLDER}/02-discovery-se.md`, QA discovery at `{SPEC_FOLDER}/02-discovery-qa.md`{if UI/UX active: ', UI/UX discovery at `{SPEC_FOLDER}/02-discovery-ui.md`'}, and Tech Lead discovery review at `{SPEC_FOLDER}/02-discovery-tl.md`. Create a detailed implementation plan. Pay special attention to the TL's recommendations and address them in your plan. Include a PR Strategy section specifying how many sub-PRs this should be decomposed into and what each covers. Write your plan to `{SPEC_FOLDER}/03-plan-se.md`."
 
    b. **`qa-engineer` in PLANNING mode**:
-   - Prompt: "You are in PLANNING mode. Read all documents: specification at `{SPEC_FOLDER}/01-spec.md`{if UI/UX active: ', UI spec review at `{SPEC_FOLDER}/01-spec-ui-review.md`'}, your discovery at `{SPEC_FOLDER}/02-discovery-qa.md`, SE discovery at `{SPEC_FOLDER}/02-discovery-se.md`{if UI/UX active: ', UI/UX discovery at `{SPEC_FOLDER}/02-discovery-ui.md`'}, and Tech Lead discovery review at `{SPEC_FOLDER}/02-discovery-tl.md`. Create a detailed test plan mapping every acceptance criterion{if UI/UX active: ' (including UI acceptance criteria from the spec review)'} to specific test cases. Include regression and edge case tests. Write your plan to `{SPEC_FOLDER}/03-plan-qa.md`."
+   - Prompt: "You are in PLANNING mode. Read all documents: specification at `{SPEC_FOLDER}/01-spec.md`{if UI/UX active: ', UI spec review at `{SPEC_FOLDER}/01-spec-ui-review.md`'}{if database-architect active: ', database spec review at `{SPEC_FOLDER}/01-spec-db-review.md`'}, your discovery at `{SPEC_FOLDER}/02-discovery-qa.md`, SE discovery at `{SPEC_FOLDER}/02-discovery-se.md`{if UI/UX active: ', UI/UX discovery at `{SPEC_FOLDER}/02-discovery-ui.md`'}, and Tech Lead discovery review at `{SPEC_FOLDER}/02-discovery-tl.md`. Create a detailed test plan mapping every acceptance criterion{if UI/UX active: ' (including UI acceptance criteria from the spec review)'} to specific test cases. Include regression and edge case tests. Write your plan to `{SPEC_FOLDER}/03-plan-qa.md`."
+
+   c. **`database-architect` in PLANNING mode** (only if activated):
+   - Prompt: "You are in PLANNING mode. Read all documents: specification at `{SPEC_FOLDER}/01-spec.md`, database spec review at `{SPEC_FOLDER}/01-spec-db-review.md`{if UI/UX active: ', UI spec review at `{SPEC_FOLDER}/01-spec-ui-review.md`'}, your discovery at `{SPEC_FOLDER}/02-discovery-db.md`, SE discovery at `{SPEC_FOLDER}/02-discovery-se.md`, QA discovery at `{SPEC_FOLDER}/02-discovery-qa.md`, and Tech Lead discovery review at `{SPEC_FOLDER}/02-discovery-tl.md`. Create a detailed database layer plan: schema changes, migration files, index strategy, ORM configuration changes. Pay special attention to migration safety, rollback viability, and the TL's recommendations. Write your plan to `{SPEC_FOLDER}/03-plan-db.md`."
 
 2. **Wait for both agents to complete.**
 
-3. **Cross-review round** — Launch agents in parallel (2 or 3):
+3. **Cross-review round** — Launch agents in parallel (2–4):
 
    a. **`software-engineer` in PLANNING mode (cross-review)**:
-   - Prompt: "You are completing a cross-review. Read the QA Engineer's test plan at `{SPEC_FOLDER}/03-plan-qa.md`. Then read your own implementation plan at `{SPEC_FOLDER}/03-plan-se.md`. Append a '## Cross-Review Notes' section to your plan with comments on whether your implementation supports QA's test cases, interface contracts, and any adjustments."
+   - Prompt: "You are completing a cross-review. Read the QA Engineer's test plan at `{SPEC_FOLDER}/03-plan-qa.md`. Then read your own implementation plan at `{SPEC_FOLDER}/03-plan-se.md`. Append a '## Cross-Review Notes' section to your plan with comments on whether your implementation supports QA's test cases, interface contracts, and any adjustments.{if database-architect active: ' Also read the database-architect plan at `{SPEC_FOLDER}/03-plan-db.md` and comment on DB layer compatibility.'}"
 
    b. **`qa-engineer` in PLANNING mode (cross-review)**:
    - Prompt: "You are completing a cross-review. Read the Software Engineer's implementation plan at `{SPEC_FOLDER}/03-plan-se.md`. Then read your own test plan at `{SPEC_FOLDER}/03-plan-qa.md`. Append a '## Cross-Review Notes' section to your plan with comments on testability, implementation dependencies, and any adjustments."
@@ -142,10 +182,13 @@ This workflow handles small features, enhancements, refactors, new API endpoints
    c. **`ui-ux-specialist` in PLANNING REVIEW** (only if activated):
    - Prompt: "You are reviewing the SE's plan for UI compliance. Read the SE's implementation plan at `{SPEC_FOLDER}/03-plan-se.md` and your spec review at `{SPEC_FOLDER}/01-spec-ui-review.md`. Assess whether the plan adequately addresses your UI acceptance criteria, accessibility requirements, and design system recommendations. Write your review to `{SPEC_FOLDER}/03-plan-ui-review.md`."
 
+   d. **`database-architect` in PLANNING mode (cross-review)** (only if activated):
+   - Prompt: "You are completing a cross-review. Read the Software Engineer's implementation plan at `{SPEC_FOLDER}/03-plan-se.md`. Then read your own plan at `{SPEC_FOLDER}/03-plan-db.md`. Append a '## SE Plan Review Notes' section to your plan at `{SPEC_FOLDER}/03-plan-db.md` assessing whether the SE's approach is compatible with your DB layer plan — data access patterns, transaction boundaries, entity usage."
+
 4. **Wait for cross-reviews to complete.**
 
 5. **Launch `tech-lead` in PLANNING REVIEW mode** (sequential — runs AFTER cross-reviews):
-   - Prompt: "You are in PLANNING REVIEW mode. Read all documents: specification at `{SPEC_FOLDER}/01-spec.md`, all discovery documents (`02-discovery-se.md`, `02-discovery-qa.md`, `02-discovery-tl.md`{if UI/UX active: ', `02-discovery-ui.md`'}), the SE plan at `{SPEC_FOLDER}/03-plan-se.md` (with cross-review notes), the QA plan at `{SPEC_FOLDER}/03-plan-qa.md` (with cross-review notes){if UI/UX active: ', and the UI/UX plan review at `{SPEC_FOLDER}/03-plan-ui-review.md`'}. Evaluate the SE's approach, PR decomposition, and render your verdict. Write your review to `{SPEC_FOLDER}/03-plan-tl.md`."
+   - Prompt: "You are in PLANNING REVIEW mode. Read all documents: specification at `{SPEC_FOLDER}/01-spec.md`, all discovery documents (`02-discovery-se.md`, `02-discovery-qa.md`, `02-discovery-tl.md`{if UI/UX active: ', `02-discovery-ui.md`'}{if database-architect active: ', `02-discovery-db.md`'}), the SE plan at `{SPEC_FOLDER}/03-plan-se.md` (with cross-review notes), the QA plan at `{SPEC_FOLDER}/03-plan-qa.md` (with cross-review notes){if UI/UX active: ', and the UI/UX plan review at `{SPEC_FOLDER}/03-plan-ui-review.md`'}{if database-architect active: ', and the database plan at `{SPEC_FOLDER}/03-plan-db.md` (with SE review notes)'}. Evaluate the SE's approach, PR decomposition, and render your verdict. Write your review to `{SPEC_FOLDER}/03-plan-tl.md`."
 
 6. **Read the TL's planning review** at `{SPEC_FOLDER}/03-plan-tl.md`. Check the verdict.
 
@@ -171,6 +214,7 @@ This workflow handles small features, enhancements, refactors, new API endpoints
    - QA plan: test strategy, test cases per acceptance criterion, coverage
    - TL verdict: APPROVED/WITH CHANGES/REJECTED and rationale
    - UI/UX plan review (if active): coverage of UI criteria
+   - Database architect plan (if active): schema changes, migration strategy, index plan
    - Any cross-review concerns
 
 9. **User checkpoint**: Ask the user to approve both plans before implementation.
@@ -200,7 +244,10 @@ This workflow handles small features, enhancements, refactors, new API endpoints
       - If single PR: work directly on `{BRANCH_NAME}` (no sub-branch needed).
 
    b. **Launch `software-engineer` in IMPLEMENTATION mode**:
-      - Prompt: "You are in IMPLEMENTATION mode. Read your implementation plan at `{SPEC_FOLDER}/03-plan-se.md` and the specification at `{SPEC_FOLDER}/01-spec.md`. {If multi-PR: 'This is PR {N} of {total}. Implement ONLY the scope for this PR: {PR scope description from the plan}.'} Implement the changes following your plan exactly. If you must deviate, document why. Keep changes minimal. Write your implementation summary to `{SPEC_FOLDER}/04-implementation-summary.md`{if multi-PR: ' (append a section for PR {N})'}."
+      - Prompt: "You are in IMPLEMENTATION mode. Read your implementation plan at `{SPEC_FOLDER}/03-plan-se.md` and the specification at `{SPEC_FOLDER}/01-spec.md`{if database-architect active: ' and the database spec review at `{SPEC_FOLDER}/01-spec-db-review.md`'}. {If multi-PR: 'This is PR {N} of {total}. Implement ONLY the scope for this PR: {PR scope description from the plan}.'} Implement the changes following your plan exactly. If you must deviate, document why. Keep changes minimal. Write your implementation summary to `{SPEC_FOLDER}/04-implementation-summary.md`{if multi-PR: ' (append a section for PR {N})'}."
+
+   b-ii. **Launch `database-architect` in IMPLEMENTATION mode** (only if activated, after SE completes):
+      - Prompt: "You are in IMPLEMENTATION mode. Read your plan at `{SPEC_FOLDER}/03-plan-db.md`, the specification at `{SPEC_FOLDER}/01-spec.md`, the database spec review at `{SPEC_FOLDER}/01-spec-db-review.md`, and the SE's implementation summary at `{SPEC_FOLDER}/04-implementation-summary.md`. {If multi-PR: 'This is PR {N} of {total}. Implement ONLY the database layer scope for this PR: {PR scope description from the plan}.'} Implement DB layer files (entity definitions, migration files, raw query files, ORM configuration) following your plan exactly. This is the same branch as the SE — DB layer code is committed alongside application code. Write your DB implementation summary to `{SPEC_FOLDER}/04-db-summary.md`{if multi-PR: ' (append a section for PR {N})'}."
 
    c. **Determine execution order for QA** (same logic as patch):
       - If QA tests depend on new code the SE just wrote: run SE first, then QA.
@@ -208,7 +255,7 @@ This workflow handles small features, enhancements, refactors, new API endpoints
       - When in doubt: SE first, then QA.
 
    d. **Launch `qa-engineer` in IMPLEMENTATION mode**:
-      - Prompt: "You are in IMPLEMENTATION mode. Read your test plan at `{SPEC_FOLDER}/03-plan-qa.md`, the specification at `{SPEC_FOLDER}/01-spec.md`, and the SE's implementation summary at `{SPEC_FOLDER}/04-implementation-summary.md`. {If multi-PR: 'This is PR {N} of {total}. Implement ONLY the tests for this PR scope: {PR scope description}.'} Implement the tests following your plan. Follow the project's test conventions exactly. Run the test suite after writing tests. Write your test report to `{SPEC_FOLDER}/04-test-report.md`{if multi-PR: ' (append a section for PR {N})'}."
+      - Prompt: "You are in IMPLEMENTATION mode. Read your test plan at `{SPEC_FOLDER}/03-plan-qa.md`, the specification at `{SPEC_FOLDER}/01-spec.md`, and the SE's implementation summary at `{SPEC_FOLDER}/04-implementation-summary.md`{if database-architect active: ' and the DB implementation summary at `{SPEC_FOLDER}/04-db-summary.md`'}. {If multi-PR: 'This is PR {N} of {total}. Implement ONLY the tests for this PR scope: {PR scope description}.'} Implement the tests following your plan. Follow the project's test conventions exactly. Run the test suite after writing tests. Write your test report to `{SPEC_FOLDER}/04-test-report.md`{if multi-PR: ' (append a section for PR {N})'}."
 
    e. **Commit changes to the branch**:
       - Stage code changes and test changes.
@@ -222,6 +269,7 @@ This workflow handles small features, enhancements, refactors, new API endpoints
 4. **After all sub-PRs are implemented**:
    - Ensure `{SPEC_FOLDER}/04-implementation-summary.md` has a consolidated summary of all PRs.
    - Ensure `{SPEC_FOLDER}/04-test-report.md` has a consolidated report of all test results.
+   - If database-architect active: ensure `{SPEC_FOLDER}/04-db-summary.md` has consolidated DB sections for all PRs.
 
 5. **Cross-review round** — Launch two agents in parallel:
 
@@ -250,9 +298,9 @@ This workflow handles small features, enhancements, refactors, new API endpoints
 ### Steps:
 
 1. **Launch `qa-engineer` in QUALITY GATE mode** (runs first — produces the base report):
-   - Prompt: "You are in QUALITY GATE mode. This is the final validation. Read the specification at `{SPEC_FOLDER}/01-spec.md`{if UI/UX active: ', the UI spec review at `{SPEC_FOLDER}/01-spec-ui-review.md`'}, the implementation summary at `{SPEC_FOLDER}/04-implementation-summary.md`, and the test report at `{SPEC_FOLDER}/04-test-report.md`. Review the actual code changes by reading the modified files. Run the full test suite. Validate every acceptance criterion{if UI/UX active: ' (including UI criteria)'}. Write the quality gate report to `{SPEC_FOLDER}/05-quality-gate.md`."
+   - Prompt: "You are in QUALITY GATE mode. This is the final validation. Read the specification at `{SPEC_FOLDER}/01-spec.md`{if UI/UX active: ', the UI spec review at `{SPEC_FOLDER}/01-spec-ui-review.md`'}{if database-architect active: ', the database spec review at `{SPEC_FOLDER}/01-spec-db-review.md`'}, the implementation summary at `{SPEC_FOLDER}/04-implementation-summary.md`{if database-architect active: ', the DB implementation summary at `{SPEC_FOLDER}/04-db-summary.md`'}, and the test report at `{SPEC_FOLDER}/04-test-report.md`. Review the actual code changes by reading the modified files. Run the full test suite. Validate every acceptance criterion{if UI/UX active: ' (including UI criteria)'}. Write the quality gate report to `{SPEC_FOLDER}/05-quality-gate.md`."
 
-2. **After QA completes, launch the remaining reviewers in parallel** (2 or 3 agents):
+2. **After QA completes, launch the remaining reviewers in parallel** (2–4 agents):
 
    a. **`software-engineer` in QUALITY GATE mode** (test review):
    - Prompt: "You are in QUALITY GATE mode (test review). Read the test report at `{SPEC_FOLDER}/04-test-report.md` and review the actual test code. Assess test correctness, coverage adequacy, and test quality. Append your '## Software Engineer - Test Quality Review' section to the quality gate report at `{SPEC_FOLDER}/05-quality-gate.md`."
@@ -263,6 +311,9 @@ This workflow handles small features, enhancements, refactors, new API endpoints
    c. **`ui-ux-specialist` in QUALITY GATE mode** (design review, only if activated):
    - Prompt: "You are in QUALITY GATE mode (design review). Read your spec review at `{SPEC_FOLDER}/01-spec-ui-review.md`, the implementation summary at `{SPEC_FOLDER}/04-implementation-summary.md`, and the test report at `{SPEC_FOLDER}/04-test-report.md`. Review the actual UI code changes. Validate design system compliance, accessibility, and responsive behavior. Append your '## UI/UX Specialist - Design Review' section to the quality gate report at `{SPEC_FOLDER}/05-quality-gate.md`."
 
+   d. **`database-architect` in QUALITY GATE mode** (schema and query review, only if activated):
+   - Prompt: "You are in QUALITY GATE mode (schema and query review). Read your spec review at `{SPEC_FOLDER}/01-spec-db-review.md`, your plan at `{SPEC_FOLDER}/03-plan-db.md`, the DB implementation summary at `{SPEC_FOLDER}/04-db-summary.md`, and the implementation summary at `{SPEC_FOLDER}/04-implementation-summary.md`. Review the actual DB layer files (entity definitions, migration files, raw queries, ORM config). Validate migration safety, schema correctness, index coverage, and query performance. Append your '## Database Architect - Schema & Query Review' section to the quality gate report at `{SPEC_FOLDER}/05-quality-gate.md`."
+
 3. **Read the full quality gate report** at `{SPEC_FOLDER}/05-quality-gate.md`.
 
 4. **Present results to the user**:
@@ -271,6 +322,7 @@ This workflow handles small features, enhancements, refactors, new API endpoints
    - SE's test quality assessment
    - TL's architecture review: verdict and any concerns
    - UI/UX design review (if active): compliance, accessibility, responsive behavior
+   - Database architect schema & query review (if active): migration safety, index coverage, query performance verdict
    - Overall recommendation: consolidate all verdicts into a single recommendation.
 
 5. **Handle the verdict** (use the most restrictive verdict across all reviewers):
@@ -320,6 +372,7 @@ This workflow handles small features, enhancements, refactors, new API endpoints
    - SE Test Review: [verdict]
    - TL Architecture Review: [verdict]
    - UI/UX Design Review: [verdict or "N/A"]
+   - Database Architect Schema & Query Review: [verdict or "N/A"]
 
    ## Acceptance Criteria Status
    [From 05-quality-gate.md — PASS/FAIL per criterion]
