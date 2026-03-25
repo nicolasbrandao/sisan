@@ -1,7 +1,7 @@
 {
   "name": "sisan",
   "version": "1.0.0",
-  "description": "Multi-agent development team (PM, SE, QA, Tech Lead, UI/UX Specialist, Software Architect, DevOps Engineer) with tiered workflows for patches, minor features, and major cross-service changes. Produces structured spec documents, ADRs, and audit trails.",
+  "description": "Multi-agent development team (PM, SE, QA, Tech Lead, UI/UX Specialist, Software Architect, DevOps Engineer, Database Architect) with tiered workflows for patches, minor features, and major cross-service changes. Produces structured spec documents, ADRs, and audit trails.",
   "author": {
     "name": "Nicolas Brandao",
     "email": "nicolas.brandaor@gmail.com",
