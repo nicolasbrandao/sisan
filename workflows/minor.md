@@ -392,7 +392,38 @@ This workflow handles small features, enhancements, refactors, new API endpoints
      - Push the sub-branch to the remote with `-u` flag.
      - Create a PR targeting the feature branch `{BRANCH_NAME}`:
        - `gh pr create --base {BRANCH_NAME} --title "{PR title}" --body "{PR description for this sub-PR}"`
-     - Present the PR link to the user.
+     - **GitHub merge checkpoint** — present the PR and wait in a loop until it is merged:
+
+       ```
+       ⏸ GitHub Merge Required
+       Sub-PR #{N} has been created: {PR URL}
+       Please go to GitHub, review this PR, and merge it into `{BRANCH_NAME}`.
+
+       Once done, reply with one of:
+       - "merged" / "done" → to continue to the next sub-PR
+       - "changes requested" → I'll read the review comments and address them
+       ```
+
+       **If the user replies "changes requested"** — repeat the following until the user confirms the merge:
+
+       a. Launch `software-engineer` in **PR REVIEW RESPONSE mode**:
+          - Prompt: "You are in PR REVIEW RESPONSE mode. Fetch all review comments for sub-PR #{N} using `gh pr view {PR_NUMBER} --comments` and `gh pr diff {PR_NUMBER}`. For each comment: (1) If you agree, make the code change and explain what you did. (2) If you need clarification, formulate a specific question for the user. (3) If you disagree, prepare a concise, professional pushback explaining your reasoning. Commit and push any code changes to the same branch. Write a response summary to `{SPEC_FOLDER}/06-pr-review-response-{N}.md` (append if it already exists) listing each comment and how it was handled."
+
+       b. Read `{SPEC_FOLDER}/06-pr-review-response-{N}.md`. Present each comment and its resolution.
+
+       c. If any comments required user clarification: ask the user, then re-launch SE with the answers and repeat from (a).
+
+       d. Once all comments are addressed, loop back to the checkpoint:
+          ```
+          ⏸ GitHub Merge Required (updated)
+          Changes have been pushed. Please re-review sub-PR #{N} on GitHub.
+
+          Reply with:
+          - "merged" / "done" → to continue to the next sub-PR
+          - "changes requested" → I'll address the new round of comments
+          ```
+
+       **This loop repeats until the user replies "merged" / "done".** Only then proceed to the next sub-PR.
 
 3. **Handle the feature branch** (single PR or final PR):
    - If single PR (no sub-branches): push `{BRANCH_NAME}` to remote, create PR targeting `{BASE_BRANCH}`.
@@ -400,6 +431,30 @@ This workflow handles small features, enhancements, refactors, new API endpoints
      - **Option A**: Create the final PR now (feature branch → BASE_BRANCH) with the full summary. Sub-PRs should be merged into the feature branch first.
      - **Option B**: Wait for sub-PRs to be reviewed/merged by humans first, then create the final PR later.
    - Use `gh pr create --base {BASE_BRANCH} --title "{spec title}" --body "$(cat {SPEC_FOLDER}/06-pr-summary.md)"`
+   - **GitHub merge checkpoint** for the final PR — same loop as above:
+
+     ```
+     ⏸ GitHub Merge Required
+     Final PR has been created: {PR URL}
+     Please go to GitHub, review this PR, and merge it into `{BASE_BRANCH}`.
+
+     Once done, reply with one of:
+     - "merged" / "done" → to complete the workflow
+     - "changes requested" → I'll read the review comments and address them
+     ```
+
+     **If the user replies "changes requested"** — follow the same review loop:
+
+     a. Launch `software-engineer` in **PR REVIEW RESPONSE mode**:
+        - Prompt: "You are in PR REVIEW RESPONSE mode. Fetch all review comments for the final PR using `gh pr view {PR_NUMBER} --comments` and `gh pr diff {PR_NUMBER}`. For each comment: (1) If you agree, make the code change and explain what you did. (2) If you need clarification, formulate a specific question for the user. (3) If you disagree, prepare a concise, professional pushback explaining your reasoning. Commit and push any code changes to the same branch. Write a response summary to `{SPEC_FOLDER}/06-pr-review-response-final.md` (append if it already exists) listing each comment and how it was handled."
+
+     b. Read `{SPEC_FOLDER}/06-pr-review-response-final.md`. Present each comment and its resolution.
+
+     c. If any comments required user clarification: ask, re-launch SE with answers, repeat from (a).
+
+     d. Loop back to the checkpoint until the user replies "merged" / "done".
+
+     **This loop repeats until the user confirms the merge.**
 
 4. **Stage and commit the spec folder**:
    - Stage the spec folder so the audit trail is preserved.
@@ -411,6 +466,8 @@ This workflow handles small features, enhancements, refactors, new API endpoints
    - Feature branch → target branch mapping
    - Total files changed, tests written
    - If multi-cycle: remind the user which cycles remain and what to do next.
+
+
 
 6. **Mark all todos complete.**
 
