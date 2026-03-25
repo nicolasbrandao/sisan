@@ -113,6 +113,14 @@ This workflow handles large features, new systems, cross-service changes, and in
 
 2. **Read the infra spec review**. Present to user combined with Phase 1.7 results if both present. **User checkpoint**.
 
+3. **Cross-review round** — Launch two agents in parallel:
+
+   a. **`software-architect` in SPEC REVIEW mode (cross-review)**:
+   - Prompt: "You are completing a cross-review. Read the DevOps Engineer's infrastructure spec review at `{SPEC_FOLDER}/01-spec-infra-review.md`. Then read your own architecture spec review at `{SPEC_FOLDER}/01-spec-arch-review.md`. Append a '## Cross-Review Notes' section to your document at `{SPEC_FOLDER}/01-spec-arch-review.md` with your observations about whether the architecture decisions are feasible from an infrastructure perspective, any conflicts between architectural choices and infrastructure constraints, and any concerns."
+
+   b. **`devops-engineer` in SPEC REVIEW mode (cross-review)**:
+   - Prompt: "You are completing a cross-review. Read the Software Architect's architecture spec review at `{SPEC_FOLDER}/01-spec-arch-review.md`. Then read your own infrastructure spec review at `{SPEC_FOLDER}/01-spec-infra-review.md`. Append a '## Cross-Review Notes' section to your document at `{SPEC_FOLDER}/01-spec-infra-review.md` with your observations about infrastructure feasibility gaps or confirmations in the SA's architecture, any deployment complexity the architecture creates, and any concerns."
+
 **Track activation status**: Remember which conditional agents (UI/UX, Database Architect, DevOps) are active. This determines their participation in all subsequent phases.
 
 ---
@@ -313,9 +321,23 @@ This workflow handles large features, new systems, cross-service changes, and in
    - Ensure `04-test-report.md` has consolidated results for all PRs.
    - If DevOps active: ensure `04-infra-summary.md` has consolidated infra sections.
 
-5. **Present results**: Per-phase summary, per-PR summary, consolidated totals.
+5. **Cross-review round** — Launch agents in parallel (2 or 4):
 
-6. **User checkpoint**.
+   a. **`software-engineer` in IMPLEMENTATION mode (cross-review)**:
+   - Prompt: "You are completing a cross-review. Read the QA Engineer's test report at `{SPEC_FOLDER}/04-test-report.md`. Then read your own implementation summary at `{SPEC_FOLDER}/04-implementation-summary.md`. Append a '## Cross-Review Notes' section to your document at `{SPEC_FOLDER}/04-implementation-summary.md` with your observations about whether the tests align with what was implemented, any interface assumptions in the tests that differ from reality, and any concerns."
+
+   b. **`qa-engineer` in IMPLEMENTATION mode (cross-review)**:
+   - Prompt: "You are completing a cross-review. Read the Software Engineer's implementation summary at `{SPEC_FOLDER}/04-implementation-summary.md`. Then read your own test report at `{SPEC_FOLDER}/04-test-report.md`. Append a '## Cross-Review Notes' section to your document at `{SPEC_FOLDER}/04-test-report.md` with your observations about whether the implementation matches what the tests assume, any deviations from plan that affect test correctness, and any concerns."
+
+   c. **`software-architect` in IMPLEMENTATION mode (cross-review)** (only if activated):
+   - Prompt: "You are completing a cross-review. Read the DevOps Engineer's infrastructure summary at `{SPEC_FOLDER}/04-infra-summary.md`. Then read your own implementation summary at `{SPEC_FOLDER}/04-implementation-summary.md`. Append a '## Cross-Review Notes' section to your document at `{SPEC_FOLDER}/04-implementation-summary.md` with your observations about whether the infrastructure implementation aligns with the architecture decisions, any concerns about infra changes that affect application behaviour, and any concerns."
+
+   d. **`devops-engineer` in IMPLEMENTATION mode (cross-review)** (only if activated):
+   - Prompt: "You are completing a cross-review. Read the Software Engineer's implementation summary at `{SPEC_FOLDER}/04-implementation-summary.md`. Then read your own infrastructure summary at `{SPEC_FOLDER}/04-infra-summary.md`. Append a '## Cross-Review Notes' section to your document at `{SPEC_FOLDER}/04-infra-summary.md` with your observations about whether the application implementation has any infrastructure implications, any deployment concerns raised by the SE's changes, and any concerns."
+
+6. **Present results**: Per-phase summary, per-PR summary, consolidated totals.
+
+7. **User checkpoint**.
 
 ---
 
