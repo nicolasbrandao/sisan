@@ -193,9 +193,62 @@ Comment on:
 
 ## Mode 3: IMPLEMENTATION
 
-**Goal**: Execute the plan, writing clean, correct code that follows codebase conventions.
+**Goal**: Execute the plan, writing clean, correct code that follows codebase conventions. This mode has three sub-phases driven by the workflow's TDD cycle.
 
-### Implementation Process
+---
+
+### Sub-Phase A: SCAFFOLD PHASE
+
+The orchestrator will specify "SCAFFOLD PHASE" in your prompt when running TDD.
+
+**Goal**: Create compilable stubs so QA can write failing tests before business logic exists.
+
+1. **Read the plan** (`03-plan-se.md`), focusing on the **Interface Contract** section.
+2. **Create stub implementations**:
+   - Function/method signatures with placeholder bodies (e.g., `return null`, `throw new NotImplementedError()`, `pass`)
+   - Class definitions with the correct shape but no logic
+   - Module/file exports with the correct structure
+   - Type definitions, interfaces, schemas
+3. **Ensure the project compiles/parses without errors** — run the build or type-check command. Fix any compile errors before finishing.
+4. **Do NOT implement business logic** — stubs only.
+5. **Write scaffold summary to `{SPEC_FOLDER}/04-scaffold-summary.md`**:
+
+```markdown
+# Scaffold Summary
+
+## Stubs Created
+1. `[file:line]` — `functionName(param: Type): ReturnType` — [what this will do when implemented]
+2. `[file:line]` — `ClassName.methodName(...)` — [purpose]
+
+## Build Status
+- **Command**: [build/type-check command]
+- **Result**: PASS / FAIL
+- [If FAIL]: [what needs to be fixed]
+
+## Notes for QA
+[Any caveats about the stubs — e.g., "the return type is nullable, tests should handle null"]
+```
+
+---
+
+### Sub-Phase B: TDD-GREEN PHASE
+
+The orchestrator will specify "TDD-GREEN PHASE" in your prompt when running TDD.
+
+**Goal**: Implement business logic to make every failing test from QA's TDD-RED phase pass.
+
+1. **Read the TDD-RED report** (`04-tdd-red-report.md`) — understand exactly which tests are failing and why.
+2. **Read your scaffold summary** (`04-scaffold-summary.md`) — know which stubs need real implementation.
+3. **Implement in plan order**: Follow the implementation order from `03-plan-se.md`.
+4. **Run tests frequently**: After implementing each function/method, run the relevant test subset.
+5. **Target: all RED tests turn GREEN** without breaking any previously passing tests.
+6. **Track progress**: In your implementation summary, note each function as it transitions RED → GREEN.
+
+---
+
+### Standard IMPLEMENTATION PHASE
+
+When the orchestrator does not specify SCAFFOLD or TDD-GREEN, run the standard flow:
 
 1. **Read the plan**: Follow `03-plan-se.md` exactly unless you encounter a situation that requires deviation.
 2. **Read the files**: Before modifying any file, read it first to understand the full context.
@@ -214,7 +267,7 @@ Comment on:
 
 ### Implementation Output Template
 
-Write the summary to the file path provided by the orchestrator:
+Write the summary to the file path provided by the orchestrator. Adapt based on which sub-phase you are in:
 
 ```markdown
 # Implementation Summary
@@ -222,20 +275,22 @@ Write the summary to the file path provided by the orchestrator:
 ## Spec Reference
 - **Spec**: [path to 01-spec.md]
 - **Plan**: [path to 03-plan-se.md]
+- **Phase**: [SCAFFOLD | TDD-GREEN | STANDARD]
 
 ## Changes Made
 
 ### 1. [file path]
 - **Action**: [created | modified | deleted]
-- **Description**: [what was changed]
+- **Description**: [what was changed — for SCAFFOLD: "stub" | for TDD-GREEN: "implemented"]
 - **Lines affected**: [line range or "new file"]
 
-### 2. [file path]
-- **Action**: [created | modified | deleted]
-- **Description**: [what was changed]
-- **Lines affected**: [line range]
-
 [Continue for all files...]
+
+## TDD Status (TDD-GREEN phase only)
+| Test | Was | Now |
+|------|-----|-----|
+| [test name] | RED (failing) | GREEN (passing) |
+| [test name] | RED (failing) | GREEN (passing) |
 
 ## Deviations from Plan
 [If none: "No deviations from the plan were necessary."]
@@ -245,12 +300,10 @@ Write the summary to the file path provided by the orchestrator:
 [How to verify these changes manually]
 - [Step 1]
 - [Step 2]
-- ...
 
 ## Remaining Concerns
 [Any issues discovered during implementation that are outside the spec scope]
 - [Concern 1]
-- [Concern 2]
 ```
 
 ---

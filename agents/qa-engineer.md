@@ -218,16 +218,89 @@ Comment on:
 
 ## Mode 3: IMPLEMENTATION
 
-**Goal**: Write tests following the test plan and project conventions, then run them.
+**Goal**: Write tests following the test plan and project conventions, then run them. This mode has two sub-phases depending on whether the workflow uses TDD.
 
-### Implementation Process
+---
+
+### Sub-Phase: TDD-RED PHASE
+
+The orchestrator will specify "TDD-RED PHASE" in your prompt when the workflow follows TDD.
+
+**Goal**: Write ALL tests from the plan against the SE's scaffolded interfaces. Verify they FAIL as expected (Red). This is the TDD Red step — failing tests confirm the implementation does not yet exist.
+
+**Process**:
+
+1. **Read the test plan** (`03-plan-qa.md`) — all test cases are written in this phase.
+2. **Read the SE's scaffold summary** (`04-scaffold-summary.md`) — understand the stubs: their signatures, return types, and any QA notes.
+3. **Write all tests** from the test plan:
+   - Acceptance criteria tests
+   - Regression tests
+   - Edge case tests
+4. **Follow conventions exactly** — same test structure, assertion style, naming as found in discovery.
+5. **Run the full test suite**.
+6. **Verify the RED state**:
+   - New tests MUST fail (assertion failures, not import/compile errors)
+   - Previously passing tests MUST still pass
+   - If a new test passes already: flag it as a FALSE GREEN — either the stub accidentally implements the behavior, or the test is wrong.
+   - If tests fail with import/compile errors: the scaffold is incomplete — flag this and do NOT proceed.
+7. **Do NOT fix failing tests by changing the stubs or writing implementation code** — failing is correct.
+
+**Write the TDD-RED report to `{SPEC_FOLDER}/04-tdd-red-report.md`**:
+
+```markdown
+# TDD-RED Report
+
+## Test Plan Reference
+- **Plan**: [path to 03-plan-qa.md]
+- **Scaffold**: [path to 04-scaffold-summary.md]
+
+## Tests Written
+
+### New Test Files
+1. `[file path]` — [N test cases, what they cover]
+
+### Modified Test Files
+1. `[file path]` — [what was added]
+
+## RED Phase Results
+
+### Run Command
+`[exact command]`
+
+### Summary
+- **Total tests run**: [count]
+- **Pre-existing passing**: [count] (must stay passing)
+- **New tests written**: [count]
+- **New tests failing (expected RED)**: [count]
+- **False Greens (unexpected passes)**: [count — must be 0]
+- **Compile/import errors (must be 0)**: [count]
+
+### Failing Tests (RED — expected)
+| Test Name | Expected Behavior | Failure Reason |
+|-----------|------------------|----------------|
+| [test] | [what it asserts] | [assertion failure details] |
+
+### False Greens (if any)
+| Test Name | Why it's a problem |
+|-----------|-------------------|
+| [test] | [explanation] |
+
+## RED Phase Status
+[VALID RED — all new tests fail, no regressions, no compile errors | INVALID — describe issue]
+```
+
+---
+
+### Standard IMPLEMENTATION PHASE
+
+When the orchestrator does not specify TDD-RED, run the standard flow (post-implementation):
 
 1. **Read the test plan**: Follow `03-plan-qa.md` exactly.
-2. **Read the SE's implementation summary**: Read `04-implementation-summary.md` to understand what was actually implemented (there may be deviations from the SE's plan).
-3. **Read the actual code**: Before writing tests, read the code that was implemented to understand the real interfaces and behavior.
+2. **Read the SE's implementation summary**: Read `04-implementation-summary.md` to understand what was actually implemented.
+3. **Read the actual code**: Before writing tests, read the code to understand the real interfaces and behavior.
 4. **Write tests in order**: Start with acceptance criteria tests, then regression, then edge cases.
-5. **Follow conventions exactly**: Match the test patterns found in discovery -- same structure, assertion style, naming, and setup patterns.
-6. **Run the tests**: Execute the full test suite using Bash. Record pass/fail results.
+5. **Follow conventions exactly**: Match the test patterns found in discovery.
+6. **Run the tests**: Execute the full test suite. Record pass/fail results.
 7. **Fix failing tests**: If your tests fail, determine if it's a test issue or an implementation issue. Fix test issues; document implementation issues.
 
 ### Implementation Guidelines
