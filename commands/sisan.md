@@ -144,3 +144,21 @@ After completing Phase 0, follow the instructions in the workflow file. Pass the
 - **MODEL_THOROUGH**: Resolved thorough model (default: `opus`)
 
 The workflow file contains the remaining phases. Execute them in order.
+
+---
+
+## Post-Merge: Documentation Wrap-Up
+
+After the PR is confirmed merged (user replies "merged" / "done"), run the docs-agent before marking all todos complete:
+
+1. **Launch `docs-agent` in CYCLE-WRAP-UP mode** (model: `{MODEL_FAST}`):
+   - Prompt: "You are in CYCLE-WRAP-UP mode. The following cycle has just merged. Read the spec folder and implementation documents, update CLAUDE.md, scan for other docs to update, and optionally generate a Skill if a reusable pattern was introduced. SPEC_FOLDER: `{SPEC_FOLDER}`. MERGED_BRANCH: `{BRANCH_NAME}`. BASE_BRANCH: `{BASE_BRANCH}`. PROJECT_ROOT: `.`"
+
+2. **Read `{SPEC_FOLDER}/07-docs-wrap-up.md`** after the agent completes.
+
+3. **Report to the user** (brief):
+   - Whether CLAUDE.md was updated and what changed
+   - Any other docs updated
+   - Whether a new Skill was generated (and where)
+
+4. **Mark all todos complete.**
