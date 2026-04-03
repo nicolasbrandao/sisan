@@ -18,7 +18,7 @@ This workflow handles bug fixes, hotfixes, typos, config changes, and small isol
 
 ### Steps:
 
-1. **Launch the `pm` agent in SPECIFICATION mode**:
+1. **Launch the `pm` agent in SPECIFICATION mode** (model: `{MODEL_STANDARD}`):
    - Prompt: "You are in SPECIFICATION mode. Create a detailed specification for the following request. Explore the codebase to understand the affected area, identify risks, and define precise acceptance criteria. Write the spec to `{SPEC_FOLDER}/01-spec.md`. The workflow tier is `patch` -- keep the scope tight. Request: {USER_REQUEST}. Triage context: {TRIAGE_RESULT}"
 
 2. **Read the spec**: After the PM agent completes, read `{SPEC_FOLDER}/01-spec.md`.
@@ -39,7 +39,7 @@ This workflow handles bug fixes, hotfixes, typos, config changes, and small isol
 
 ### Steps:
 
-1. **Launch two agents in parallel**:
+1. **Launch two agents in parallel** (model: `{MODEL_STANDARD}`):
 
    a. **`software-engineer` in DISCOVERY mode**:
    - Prompt: "You are in DISCOVERY mode. Read the specification at `{SPEC_FOLDER}/01-spec.md`. Explore the codebase to understand the affected code paths, identify the root cause or insertion points, map dependencies, and document conventions. Write your findings to `{SPEC_FOLDER}/02-discovery-se.md`."
@@ -49,7 +49,7 @@ This workflow handles bug fixes, hotfixes, typos, config changes, and small isol
 
 2. **Wait for both agents to complete.**
 
-3. **Cross-review round** - Launch two agents in parallel:
+3. **Cross-review round** — Launch two agents in parallel (model: `{MODEL_FAST}`):
 
    a. **`software-engineer` in DISCOVERY mode (cross-review)**:
    - Prompt: "You are completing a cross-review. Read the QA Engineer's discovery document at `{SPEC_FOLDER}/02-discovery-qa.md`. Then read your own discovery document at `{SPEC_FOLDER}/02-discovery-se.md`. Append a '## Cross-Review Notes' section to your document at `{SPEC_FOLDER}/02-discovery-se.md` with your observations about the QA findings, any alignment or conflicts, and suggestions for the QA Engineer."
@@ -75,23 +75,23 @@ This workflow handles bug fixes, hotfixes, typos, config changes, and small isol
 
 ### Steps:
 
-1. **Launch two agents in parallel**:
+1. **Launch two agents in parallel** (model: `{MODEL_STANDARD}`):
 
    a. **`software-engineer` in PLANNING mode**:
-   - Prompt: "You are in PLANNING mode. Read the following documents: specification at `{SPEC_FOLDER}/01-spec.md`, your discovery at `{SPEC_FOLDER}/02-discovery-se.md`, and the QA discovery at `{SPEC_FOLDER}/02-discovery-qa.md`. Create a detailed implementation plan with the minimal change set needed to satisfy the spec. Write your plan to `{SPEC_FOLDER}/03-plan-se.md`."
+   - Prompt: "You are in PLANNING mode. Read the following documents: specification at `{SPEC_FOLDER}/01-spec.md`, your discovery at `{SPEC_FOLDER}/02-discovery-se.md`, and the QA discovery at `{SPEC_FOLDER}/02-discovery-qa.md`. Create a detailed implementation plan with the minimal change set needed to satisfy the spec. Include an **Interface Contract** section listing every new or modified function/method signature that QA will need to write tests against before implementation. Write your plan to `{SPEC_FOLDER}/03-plan-se.md`."
 
    b. **`qa-engineer` in PLANNING mode**:
-   - Prompt: "You are in PLANNING mode. Read the following documents: specification at `{SPEC_FOLDER}/01-spec.md`, your discovery at `{SPEC_FOLDER}/02-discovery-qa.md`, and the SE discovery at `{SPEC_FOLDER}/02-discovery-se.md`. Create a detailed test plan mapping every acceptance criterion to specific test cases. Include regression and edge case tests. Write your plan to `{SPEC_FOLDER}/03-plan-qa.md`."
+   - Prompt: "You are in PLANNING mode. Read the following documents: specification at `{SPEC_FOLDER}/01-spec.md`, your discovery at `{SPEC_FOLDER}/02-discovery-qa.md`, and the SE discovery at `{SPEC_FOLDER}/02-discovery-se.md`. Create a detailed test plan mapping every acceptance criterion to specific test cases. Include regression and edge case tests. Note: implementation follows TDD — you will write failing tests FIRST (RED phase), then SE implements (GREEN phase). Design tests that can run against stubs/scaffolded interfaces. Write your plan to `{SPEC_FOLDER}/03-plan-qa.md`."
 
 2. **Wait for both agents to complete.**
 
-3. **Cross-review round** - Launch two agents in parallel:
+3. **Cross-review round** — Launch two agents in parallel (model: `{MODEL_FAST}`):
 
    a. **`software-engineer` in PLANNING mode (cross-review)**:
-   - Prompt: "You are completing a cross-review. Read the QA Engineer's test plan at `{SPEC_FOLDER}/03-plan-qa.md`. Then read your own implementation plan at `{SPEC_FOLDER}/03-plan-se.md`. Append a '## Cross-Review Notes' section to your plan at `{SPEC_FOLDER}/03-plan-se.md`. Comment on whether your implementation supports the QA test cases, any interface contracts QA expects, and any suggested adjustments."
+   - Prompt: "You are completing a cross-review. Read the QA Engineer's test plan at `{SPEC_FOLDER}/03-plan-qa.md`. Then read your own implementation plan at `{SPEC_FOLDER}/03-plan-se.md`. Append a '## Cross-Review Notes' section to your plan at `{SPEC_FOLDER}/03-plan-se.md`. Comment on whether your interface contracts support QA's test cases, and whether any interface adjustments are needed before QA writes their tests."
 
    b. **`qa-engineer` in PLANNING mode (cross-review)**:
-   - Prompt: "You are completing a cross-review. Read the Software Engineer's implementation plan at `{SPEC_FOLDER}/03-plan-se.md`. Then read your own test plan at `{SPEC_FOLDER}/03-plan-qa.md`. Append a '## Cross-Review Notes' section to your plan at `{SPEC_FOLDER}/03-plan-qa.md`. Comment on whether the SE's approach is testable, any dependencies on specific implementation choices, and any suggested adjustments."
+   - Prompt: "You are completing a cross-review. Read the Software Engineer's implementation plan at `{SPEC_FOLDER}/03-plan-se.md`. Then read your own test plan at `{SPEC_FOLDER}/03-plan-qa.md`. Append a '## Cross-Review Notes' section to your plan at `{SPEC_FOLDER}/03-plan-qa.md`. Confirm the SE's Interface Contract section has everything you need to write failing tests before implementation begins. Flag any missing signatures or ambiguous contracts."
 
 4. **Read both plans** (including cross-review notes).
 
@@ -106,43 +106,58 @@ This workflow handles bug fixes, hotfixes, typos, config changes, and small isol
 
 ---
 
-## Phase 4: Implementation
+## Phase 4: Implementation (TDD)
 
-**Goal**: SE implements the code changes, QA implements the tests.
+**Goal**: Follow the Red-Green-Refactor cycle. QA writes failing tests first; SE implements to make them pass.
 
 ### Steps:
 
 1. **Confirm user approval**: If the user has not explicitly approved, ask now.
 
-2. **Determine execution order**:
-   - Read both plans (`03-plan-se.md` and `03-plan-qa.md`).
-   - If the QA test plan depends on new interfaces, functions, or code being created by the SE (i.e., tests import or reference code that doesn't exist yet), run SE first, then QA.
-   - If the QA tests can be written independently (testing existing interfaces, behavior changes in existing functions), run both in parallel.
-   - When in doubt, run SE first, then QA -- it's safer.
+### Phase 4.1 — Scaffold (SE)
 
-3. **Launch `software-engineer` in IMPLEMENTATION mode**:
-   - Prompt: "You are in IMPLEMENTATION mode. Read your implementation plan at `{SPEC_FOLDER}/03-plan-se.md` and the specification at `{SPEC_FOLDER}/01-spec.md`. Implement the changes following your plan exactly. If you must deviate, document why. Keep changes minimal -- only what the plan calls for. Write your implementation summary to `{SPEC_FOLDER}/04-implementation-summary.md`."
+2. **Launch `software-engineer` in IMPLEMENTATION mode, SCAFFOLD PHASE** (model: `{MODEL_STANDARD}`):
+   - Prompt: "You are in IMPLEMENTATION mode, SCAFFOLD PHASE. Read your implementation plan at `{SPEC_FOLDER}/03-plan-se.md` and the specification at `{SPEC_FOLDER}/01-spec.md`. Your task right now is to create ONLY the interface scaffolding — function signatures, class stubs, type definitions, module exports — with placeholder bodies (return null/empty/throw NotImplemented). Do NOT implement any business logic yet. The goal is to give QA compilable stubs to write failing tests against. After creating stubs, ensure the project builds without errors. Write your scaffold summary to `{SPEC_FOLDER}/04-scaffold-summary.md` listing every stub created with its file path and signature."
 
-4. **After SE completes, launch `qa-engineer` in IMPLEMENTATION mode** (or in parallel if determined safe in step 2):
-   - Prompt: "You are in IMPLEMENTATION mode. Read your test plan at `{SPEC_FOLDER}/03-plan-qa.md`, the specification at `{SPEC_FOLDER}/01-spec.md`, and the SE's implementation summary at `{SPEC_FOLDER}/04-implementation-summary.md`. Implement the tests following your plan. Follow the project's test conventions exactly. Run the full test suite after writing tests. Write your test report to `{SPEC_FOLDER}/04-test-report.md`."
+3. **Wait for scaffold to complete. Read `{SPEC_FOLDER}/04-scaffold-summary.md`.**
 
-5. **Cross-review round** - Launch two agents in parallel:
+### Phase 4.2 — TDD Red (QA)
+
+4. **Launch `qa-engineer` in IMPLEMENTATION mode, TDD-RED PHASE** (model: `{MODEL_STANDARD}`):
+   - Prompt: "You are in IMPLEMENTATION mode, TDD-RED PHASE. Read your test plan at `{SPEC_FOLDER}/03-plan-qa.md`, the specification at `{SPEC_FOLDER}/01-spec.md`, and the SE's scaffold summary at `{SPEC_FOLDER}/04-scaffold-summary.md`. Write ALL tests from your test plan now, targeting the scaffolded interfaces. Then run the full test suite. EXPECT the new tests to FAIL — this is correct and required for TDD. Verify: (1) new tests fail with assertion errors (not import/compile errors), and (2) previously passing tests still pass. Document the RED state clearly. Write your TDD-RED report to `{SPEC_FOLDER}/04-tdd-red-report.md`."
+
+5. **Wait for QA to complete. Read `{SPEC_FOLDER}/04-tdd-red-report.md`.**
+   - If any new tests pass already (false greens) or fail with compile errors: ask the user how to proceed before continuing.
+   - If previously passing tests now fail: this is a regression from the scaffolding. Ask the user — do NOT proceed automatically.
+
+### Phase 4.3 — TDD Green (SE)
+
+6. **Launch `software-engineer` in IMPLEMENTATION mode, TDD-GREEN PHASE** (model: `{MODEL_STANDARD}`):
+   - Prompt: "You are in IMPLEMENTATION mode, TDD-GREEN PHASE. Read your implementation plan at `{SPEC_FOLDER}/03-plan-se.md`, the specification at `{SPEC_FOLDER}/01-spec.md`, your scaffold summary at `{SPEC_FOLDER}/04-scaffold-summary.md`, and the QA's TDD-RED report at `{SPEC_FOLDER}/04-tdd-red-report.md`. Implement the full business logic for every stub. Your goal: make every failing test from the TDD-RED phase pass without breaking any previously passing tests. Run the full test suite after implementing. Write your implementation summary to `{SPEC_FOLDER}/04-implementation-summary.md` — include which RED tests are now GREEN."
+
+7. **Wait for SE to complete. Read `{SPEC_FOLDER}/04-implementation-summary.md`.**
+   - If tests are still failing: present the failures to the user. Do not proceed to quality gates with failing tests unless the user explicitly approves.
+
+### Phase 4.4 — Cross-Reviews
+
+8. **Cross-review round** — Launch two agents in parallel (model: `{MODEL_FAST}`):
 
    a. **`software-engineer` in IMPLEMENTATION mode (cross-review)**:
-   - Prompt: "You are completing a cross-review. Read the QA Engineer's test report at `{SPEC_FOLDER}/04-test-report.md`. Then read your own implementation summary at `{SPEC_FOLDER}/04-implementation-summary.md`. Append a '## Cross-Review Notes' section to your document at `{SPEC_FOLDER}/04-implementation-summary.md` with your observations about whether the tests align with what was implemented, any interface assumptions in the tests that differ from reality, and any concerns."
+   - Prompt: "You are completing a cross-review. Read the QA Engineer's TDD-RED report at `{SPEC_FOLDER}/04-tdd-red-report.md`. Then read your own implementation summary at `{SPEC_FOLDER}/04-implementation-summary.md`. Append a '## Cross-Review Notes' section to your document at `{SPEC_FOLDER}/04-implementation-summary.md` with observations on whether all RED tests are now GREEN, any interface assumptions in the tests that needed adjustment, and any remaining concerns."
 
    b. **`qa-engineer` in IMPLEMENTATION mode (cross-review)**:
-   - Prompt: "You are completing a cross-review. Read the Software Engineer's implementation summary at `{SPEC_FOLDER}/04-implementation-summary.md`. Then read your own test report at `{SPEC_FOLDER}/04-test-report.md`. Append a '## Cross-Review Notes' section to your document at `{SPEC_FOLDER}/04-test-report.md` with your observations about whether the implementation matches what the tests assume, any deviations from plan that affect test correctness, and any concerns."
+   - Prompt: "You are completing a cross-review. Read the Software Engineer's implementation summary at `{SPEC_FOLDER}/04-implementation-summary.md`. Then read your own TDD-RED report at `{SPEC_FOLDER}/04-tdd-red-report.md`. Append a '## Cross-Review Notes' section to your document at `{SPEC_FOLDER}/04-tdd-red-report.md` with observations on the TDD cycle: did all RED tests turn GREEN, were there any deviations from plan, and does the implementation match what the tests assume? Write the consolidated test report to `{SPEC_FOLDER}/04-test-report.md` (one-page summary: tests written, pass/fail counts, TDD cycle status)."
 
-6. **Read both output documents.**
+9. **Read all output documents.**
 
-7. **Present results to the user**:
-   - SE: files changed, any deviations from plan
-   - QA: tests written, test results (pass/fail counts)
-   - Highlight any failures or concerns
+10. **Present results to the user**:
+    - Scaffold: stubs created, build status
+    - TDD-RED: tests written, confirmed failures (count)
+    - TDD-GREEN: implementation complete, tests passing (count)
+    - Any deviations from plan
 
-8. **User checkpoint**: Ask the user to review and proceed to quality gates.
-   - If there are test failures, discuss with the user before proceeding.
+11. **User checkpoint**: Ask the user to review and proceed to quality gates.
+    - If there are test failures, discuss with the user before proceeding.
 
 ---
 
@@ -152,14 +167,16 @@ This workflow handles bug fixes, hotfixes, typos, config changes, and small isol
 
 ### Steps:
 
-1. **Launch `qa-engineer` in QUALITY GATE mode**:
-   - Prompt: "You are in QUALITY GATE mode. This is the final validation. Read the specification at `{SPEC_FOLDER}/01-spec.md`, the implementation summary at `{SPEC_FOLDER}/04-implementation-summary.md`, and the test report at `{SPEC_FOLDER}/04-test-report.md`. Review the actual code changes by reading the modified files. Run the full test suite. Validate every acceptance criterion. Write the quality gate report to `{SPEC_FOLDER}/05-quality-gate.md`."
+1. **Launch two agents in parallel** (model: `{MODEL_STANDARD}`):
 
-2. **After QA completes, launch `software-engineer` in QUALITY GATE mode**:
-   - Prompt: "You are in QUALITY GATE mode (test review). Read the test report at `{SPEC_FOLDER}/04-test-report.md` and review the actual test code. Assess test correctness, coverage adequacy, and test quality. Append your '## Software Engineer - Test Quality Review' section to the quality gate report at `{SPEC_FOLDER}/05-quality-gate.md`."
+   a. **`qa-engineer` in QUALITY GATE mode**:
+   - Prompt: "You are in QUALITY GATE mode. This is the final validation. Read the specification at `{SPEC_FOLDER}/01-spec.md`, the implementation summary at `{SPEC_FOLDER}/04-implementation-summary.md`, the TDD-RED report at `{SPEC_FOLDER}/04-tdd-red-report.md`, and the test report at `{SPEC_FOLDER}/04-test-report.md`. Review the actual code changes by reading the modified files. Run the full test suite. Validate every acceptance criterion. Write the quality gate report to `{SPEC_FOLDER}/05-quality-gate.md`."
 
-3. **After SE completes, launch `qa-engineer` in QUALITY GATE mode (final reflection)**:
-   - Prompt: "You are completing a final reflection. Read the full quality gate report at `{SPEC_FOLDER}/05-quality-gate.md`, including the Software Engineer's '## Software Engineer - Test Quality Review' section. Append a '## QA Engineer - Final Reflection' section to `{SPEC_FOLDER}/05-quality-gate.md` acknowledging the SE's test quality findings, noting any updates to your assessment warranted by the SE's observations, and confirming or revising your overall verdict."
+   b. **`software-engineer` in QUALITY GATE mode**:
+   - Prompt: "You are in QUALITY GATE mode (test review). Read the TDD-RED report at `{SPEC_FOLDER}/04-tdd-red-report.md` and the test report at `{SPEC_FOLDER}/04-test-report.md`. Review the actual test code. Assess test correctness, TDD cycle completeness (all RED tests now GREEN), coverage adequacy, and test quality. Write your review to `{SPEC_FOLDER}/05-quality-gate-se.md`."
+
+2. **After both complete, launch `qa-engineer` in QUALITY GATE mode (final reflection)** (model: `{MODEL_FAST}`):
+   - Prompt: "You are completing a final reflection. Read the quality gate report at `{SPEC_FOLDER}/05-quality-gate.md` and the SE's test quality review at `{SPEC_FOLDER}/05-quality-gate-se.md`. Append a '## Software Engineer - Test Quality Review' section to `{SPEC_FOLDER}/05-quality-gate.md` (copying the SE's content), then append a '## QA Engineer - Final Reflection' section acknowledging the SE's findings and confirming or revising your overall verdict."
 
 4. **Read the quality gate report.**
 

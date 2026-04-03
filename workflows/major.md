@@ -79,7 +79,7 @@ This workflow handles large features, new systems, cross-service changes, and in
 
 ### Steps:
 
-1. **Launch `software-architect` in SPEC REVIEW mode**:
+1. **Launch `software-architect` in SPEC REVIEW mode** (model: `{MODEL_THOROUGH}`):
    - Prompt: "You are in SPEC REVIEW mode. Read the specification at `{SPEC_FOLDER}/01-spec.md`{if UI/UX active: ' and the UI spec review at `{SPEC_FOLDER}/01-spec-ui-review.md`'}{if database-architect active: ' and the database spec review at `{SPEC_FOLDER}/01-spec-db-review.md`'}. Explore the codebase to map the current system topology — services, databases, message queues, API gateways, shared libraries. Identify affected services, data ownership boundaries, API contracts that need to change or be created, cross-service data flow, and backward compatibility concerns. Draft initial Architecture Decision Records (ADRs) for significant decisions. Recommend a PR phasing strategy based on service dependencies. Write your review to `{SPEC_FOLDER}/01-spec-arch-review.md`."
 
 2. **Read the architecture spec review**: After the SA completes, read `{SPEC_FOLDER}/01-spec-arch-review.md`.
@@ -108,12 +108,12 @@ This workflow handles large features, new systems, cross-service changes, and in
 
 ### Steps (only if activated):
 
-1. **Launch `devops-engineer` in SPEC REVIEW mode**:
+1. **Launch `devops-engineer` in SPEC REVIEW mode** (model: `{MODEL_STANDARD}`):
    - Prompt: "You are in SPEC REVIEW mode. Read the specification at `{SPEC_FOLDER}/01-spec.md` and the architecture spec review at `{SPEC_FOLDER}/01-spec-arch-review.md`. Explore the codebase to understand the current CI/CD pipelines, deployment topology, Infrastructure as Code, monitoring, and environment configuration. Identify infrastructure requirements, deployment strategy needs, environment configuration needs, and monitoring requirements. Write your review to `{SPEC_FOLDER}/01-spec-infra-review.md`."
 
 2. **Read the infra spec review**. Present to user combined with Phase 1.7 results if both present. **User checkpoint**.
 
-3. **Cross-review round** — Launch two agents in parallel:
+3. **Cross-review round** — Launch two agents in parallel (model: `{MODEL_FAST}`):
 
    a. **`software-architect` in SPEC REVIEW mode (cross-review)**:
    - Prompt: "You are completing a cross-review. Read the DevOps Engineer's infrastructure spec review at `{SPEC_FOLDER}/01-spec-infra-review.md`. Then read your own architecture spec review at `{SPEC_FOLDER}/01-spec-arch-review.md`. Append a '## Cross-Review Notes' section to your document at `{SPEC_FOLDER}/01-spec-arch-review.md` with your observations about whether the architecture decisions are feasible from an infrastructure perspective, any conflicts between architectural choices and infrastructure constraints, and any concerns."
@@ -131,7 +131,7 @@ This workflow handles large features, new systems, cross-service changes, and in
 
 ### Steps:
 
-1. **Launch agents in parallel** (3–6 agents depending on conditional activations):
+1. **Launch agents in parallel** (model: `{MODEL_STANDARD}` for SE/QA/UI/DevOps/DBA, `{MODEL_THOROUGH}` for SA; 3–6 agents depending on conditional activations):
 
    a. **`software-engineer` in DISCOVERY mode**:
    - Prompt: "You are in DISCOVERY mode. Read the specification at `{SPEC_FOLDER}/01-spec.md`{if UI/UX active: ', the UI spec review at `{SPEC_FOLDER}/01-spec-ui-review.md`'}, and the architecture spec review at `{SPEC_FOLDER}/01-spec-arch-review.md`{if DevOps active: ', and the infrastructure spec review at `{SPEC_FOLDER}/01-spec-infra-review.md`'}{if database-architect active: ', and the database spec review at `{SPEC_FOLDER}/01-spec-db-review.md`'}. Explore the codebase to understand the affected code paths, identify root causes or insertion points, map dependencies, and document conventions. In major workflows, pay special attention to the SA's API contracts and service boundaries — your implementation must conform to them. Write your findings to `{SPEC_FOLDER}/02-discovery-se.md`."
@@ -153,7 +153,7 @@ This workflow handles large features, new systems, cross-service changes, and in
 
 2. **Wait for all agents to complete.**
 
-3. **Cross-review round** — Launch agents in parallel (3–6):
+3. **Cross-review round** — Launch agents in parallel (model: `{MODEL_FAST}`, 3–6):
 
    a. **`software-engineer` cross-review**:
    - Prompt: "You are completing a cross-review. Read the QA Engineer's discovery at `{SPEC_FOLDER}/02-discovery-qa.md` and the Software Architect's discovery at `{SPEC_FOLDER}/02-discovery-sa.md`. Then read your own discovery at `{SPEC_FOLDER}/02-discovery-se.md`. Append a '## Cross-Review Notes' section with observations about QA and SA findings, system-level implications of your code-level findings, and any alignment or conflicts."
@@ -192,7 +192,7 @@ This workflow handles large features, new systems, cross-service changes, and in
 
 ### Steps:
 
-1. **Launch agents in parallel** (3–5 agents depending on conditional activations):
+1. **Launch agents in parallel** (model: `{MODEL_STANDARD}` for SE/QA/DevOps/DBA, `{MODEL_THOROUGH}` for SA; 3–5 agents depending on conditional activations):
 
    a. **`software-engineer` in PLANNING mode**:
    - Prompt: "You are in PLANNING mode. Read all documents: specification at `{SPEC_FOLDER}/01-spec.md`, all spec reviews (UI, architecture, database, infra — whichever exist), all discovery documents (SE, QA, SA, TL, UI/UX, DevOps, DB — whichever exist). Create a detailed implementation plan. Pay special attention to: (1) the SA's architecture review and API contracts — your implementation must conform to them, (2) the TL's recommendations, (3) the SA's recommended PR phasing. In major workflows, infra code (Dockerfiles, CI configs, IaC) is implemented by the DevOps Engineer, not you. Include a PR Strategy section specifying sub-PRs and their ordering. Write your plan to `{SPEC_FOLDER}/03-plan-se.md`."
@@ -211,7 +211,7 @@ This workflow handles large features, new systems, cross-service changes, and in
 
 2. **Wait for all agents to complete.**
 
-3. **Cross-review round** — Launch agents in parallel (3–6):
+3. **Cross-review round** — Launch agents in parallel (model: `{MODEL_FAST}`, 3–6):
 
    a. **`software-engineer` cross-review**:
    - Prompt: "You are completing a cross-review. Read the QA Engineer's test plan at `{SPEC_FOLDER}/03-plan-qa.md`. Then read your own plan at `{SPEC_FOLDER}/03-plan-se.md`. Append a '## Cross-Review Notes' section with comments on whether your implementation supports QA's test cases, interface contracts, and any adjustments."
@@ -347,12 +347,17 @@ This workflow handles large features, new systems, cross-service changes, and in
 
 ### Steps:
 
-1. **Launch `qa-engineer` in QUALITY GATE mode** (first — writes base report):
-   - Prompt: "You are in QUALITY GATE mode. This is the final validation. Read the specification at `{SPEC_FOLDER}/01-spec.md`{if UI/UX active: ', the UI spec review at `{SPEC_FOLDER}/01-spec-ui-review.md`'}, the architecture spec review at `{SPEC_FOLDER}/01-spec-arch-review.md`, the implementation summary at `{SPEC_FOLDER}/04-implementation-summary.md`{if DevOps active: ', the infra summary at `{SPEC_FOLDER}/04-infra-summary.md`'}, and the test report at `{SPEC_FOLDER}/04-test-report.md`. Review the actual code changes. Run the full test suite. Validate every acceptance criterion. For cross-service integration scenarios, reference the SA's integration test requirements. Write the quality gate report to `{SPEC_FOLDER}/05-quality-gate.md`."
+1. **Launch `qa-engineer` and `software-engineer` in QUALITY GATE mode in parallel** (model: `{MODEL_STANDARD}`):
 
-2. **After QA completes, launch remaining reviewers in parallel** (3-5 agents):
+   a. **`qa-engineer` in QUALITY GATE mode** (writes base report):
+   - Prompt: "You are in QUALITY GATE mode. This is the final validation. Read the specification at `{SPEC_FOLDER}/01-spec.md`{if UI/UX active: ', the UI spec review at `{SPEC_FOLDER}/01-spec-ui-review.md`'}, the architecture spec review at `{SPEC_FOLDER}/01-spec-arch-review.md`, the implementation summary at `{SPEC_FOLDER}/04-implementation-summary.md`{if DevOps active: ', the infra summary at `{SPEC_FOLDER}/04-infra-summary.md`'}, the TDD-RED report at `{SPEC_FOLDER}/04-tdd-red-report.md` (if it exists), and the test report at `{SPEC_FOLDER}/04-test-report.md`. Review the actual code changes. Run the full test suite. Validate every acceptance criterion. For cross-service integration scenarios, reference the SA's integration test requirements. Write the quality gate report to `{SPEC_FOLDER}/05-quality-gate.md`."
 
-   a. **`software-engineer` in QUALITY GATE mode** (test review):
+   b. **`software-engineer` in QUALITY GATE mode** (test review, runs in parallel with QA):
+   - Prompt: "You are in QUALITY GATE mode (test review). Read the TDD-RED report at `{SPEC_FOLDER}/04-tdd-red-report.md` (if it exists) and the test report at `{SPEC_FOLDER}/04-test-report.md`. Review the actual test code. Assess test correctness, TDD cycle completeness, coverage adequacy, and test quality. Write your review to `{SPEC_FOLDER}/05-quality-gate-se.md`."
+
+2. **After both complete, launch remaining reviewers in parallel** (model: `{MODEL_STANDARD}` for TL/UI/DevOps, `{MODEL_THOROUGH}` for SA; 2–4 agents):
+
+   a. **`tech-lead` in QUALITY GATE mode** (architecture review):
    - Prompt: "You are in QUALITY GATE mode (test review). Read the test report at `{SPEC_FOLDER}/04-test-report.md` and review the actual test code. Assess test correctness, coverage adequacy, and test quality. Append your '## Software Engineer - Test Quality Review' section to `{SPEC_FOLDER}/05-quality-gate.md`."
 
    b. **`tech-lead` in QUALITY GATE mode** (architecture review):
@@ -367,9 +372,12 @@ This workflow handles large features, new systems, cross-service changes, and in
    e. **`devops-engineer` in QUALITY GATE mode** (only if activated):
    - Prompt: "You are in QUALITY GATE mode (deployment readiness review). Read your plan at `{SPEC_FOLDER}/03-plan-devops.md`, the infra summary at `{SPEC_FOLDER}/04-infra-summary.md`, and the implementation summary at `{SPEC_FOLDER}/04-implementation-summary.md`. Review the actual infrastructure code changes. Validate CI/CD pipeline, infrastructure correctness, deployment strategy, environment configuration, monitoring, and rollback plan. Append your '## DevOps Engineer - Deployment Readiness Review' section to `{SPEC_FOLDER}/05-quality-gate.md`."
 
-3. **Read the full quality gate report**.
+3. **After all reviewers complete, consolidate** (model: `{MODEL_FAST}`): Launch `qa-engineer` in QUALITY GATE mode (final reflection):
+   - Prompt: "You are completing a final reflection. Read the quality gate report at `{SPEC_FOLDER}/05-quality-gate.md` and the SE's test review at `{SPEC_FOLDER}/05-quality-gate-se.md`. Append a '## Software Engineer - Test Quality Review' section to `{SPEC_FOLDER}/05-quality-gate.md` (copy from SE's file), then append a '## QA Engineer - Final Reflection' acknowledging all reviewers' findings and confirming your overall verdict."
 
-4. **Present results to user**:
+4. **Read the full quality gate report.**
+
+5. **Present results to user**:
    - QA verdict + acceptance criteria results
    - SE test quality assessment
    - TL code architecture verdict
@@ -378,7 +386,7 @@ This workflow handles large features, new systems, cross-service changes, and in
    - DevOps deployment readiness verdict (if active)
    - **Overall recommendation**: consolidated from all verdicts.
 
-5. **Handle the verdict** (most restrictive across all reviewers):
+6. **Handle the verdict** (most restrictive across all reviewers):
 
    a. **All APPROVED/ADEQUATE**: Proceed to Phase 6.
 
