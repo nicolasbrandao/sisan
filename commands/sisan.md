@@ -7,6 +7,48 @@ argument-hint: Description of the bug, hotfix, patch, or feature to implement
 
 You are orchestrating a multi-agent development team. Your job is to manage the workflow, launch the right agents at the right time, present results to the user, and ensure quality at every phase.
 
+---
+
+## Model Configuration
+
+Sisan uses three model tiers. Apply them when launching sub-agents via the `model` parameter of the Agent tool.
+
+| Tier | Model | When to Use |
+|------|-------|-------------|
+| `haiku` | Fast, cheap | Cross-reviews, PR description generation, docs-agent wrap-ups |
+| `sonnet` | Balanced (default) | Discovery, planning, implementation, spec writing, quality gates |
+| `opus` | Thorough, expensive | Software Architect in major tier; high-risk planning on user request |
+
+### Detecting User Preference
+
+Before Phase 0, scan `$ARGUMENTS` for model flags:
+
+- `--fast` or `--model=haiku` → set **ALL_AGENTS_MODEL** to `haiku`
+- `--thorough` or `--model=opus` → set **ALL_AGENTS_MODEL** to `opus`
+- No flag → use **tier-aware defaults** (table below)
+
+Strip any recognized model flags from `$ARGUMENTS` before passing it to agents.
+
+### Tier-Aware Defaults (no flag set)
+
+| Agent | Patch | Minor | Major |
+|-------|-------|-------|-------|
+| `pm` (triage) | haiku | haiku | haiku |
+| `pm` (specification) | sonnet | sonnet | sonnet |
+| `software-engineer` | sonnet | sonnet | sonnet |
+| `qa-engineer` | sonnet | sonnet | sonnet |
+| `tech-lead` | — | sonnet | sonnet |
+| `software-architect` | — | — | opus |
+| `ui-ux-specialist` | — | sonnet | sonnet |
+| `database-architect` | — | sonnet | sonnet |
+| `devops-engineer` | — | — | sonnet |
+| `docs-agent` | haiku | haiku | haiku |
+| Any **cross-review** agent | haiku | haiku | haiku |
+
+> Cross-reviews are the read-and-append passes at the end of each phase. Always use `haiku` for these regardless of tier or user flag (unless `--thorough` is set).
+
+---
+
 ## Core Principles
 
 - **Never skip phases**: Every phase exists for a reason. Follow them in order.
@@ -31,7 +73,7 @@ Initial request: $ARGUMENTS
    - Ask the user: What needs to change? What is the problem or desired outcome?
    - Get enough context to enable triage.
 
-3. **Launch the `pm` agent in TRIAGE mode**:
+3. **Launch the `pm` agent in TRIAGE mode** (model: `{MODEL_FAST}`):
    - Prompt: "You are in TRIAGE mode. Analyze the following request and classify it into a workflow tier (patch, minor, or major). Explore the codebase to understand the scope. Request: {user's request and any clarifications}"
    - The PM agent will return a classification with rationale.
 
@@ -75,7 +117,11 @@ Initial request: $ARGUMENTS
    - **IMPORTANT**: Never push directly to `main` unless the user explicitly asks for it. Always create a branch and PR.
    - Create the branch and check it out now. The workflow will handle commits and PRs later.
 
-9. **Dispatch to the workflow**: Read the workflow file at `./workflows/{tier}.md` (relative to the plugin root, which is the sisan plugin directory) and follow its instructions. Pass the spec folder path and the user's request to the workflow.
+9. **Resolve model settings**:
+   - Apply model flag detection from the Model Configuration section above.
+   - Store the resolved models so the workflow files can reference them in agent launches.
+
+10. **Dispatch to the workflow**: Read the workflow file at `./workflows/{tier}.md` (relative to the plugin root, which is the sisan plugin directory) and follow its instructions. Pass the spec folder path and the user's request to the workflow.
 
    **IMPORTANT**: The workflow file is located in the sisan plugin directory, not in the user's project directory. Read it from the plugin installation path.
 
@@ -93,5 +139,8 @@ After completing Phase 0, follow the instructions in the workflow file. Pass the
 - **BRANCH_NAME**: The work branch created for this cycle (e.g., `patch/001-fix-login-timeout`)
 - **BASE_BRANCH**: The branch the PR should target (e.g., `main`, or a feature/epic branch)
 - **BRANCHING_STRATEGY**: The full branching plan from triage (patch/minor/major pattern)
+- **MODEL_FAST**: Resolved fast model (default: `haiku`)
+- **MODEL_STANDARD**: Resolved standard model (default: `sonnet`)
+- **MODEL_THOROUGH**: Resolved thorough model (default: `opus`)
 
 The workflow file contains the remaining phases. Execute them in order.

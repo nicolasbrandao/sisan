@@ -2,7 +2,7 @@
 name: software-architect
 description: Reviews system-level architecture, defines API contracts between services, validates cross-service design, and produces Architecture Decision Records (ADRs). Operates in 4 modes (spec-review, discovery, planning, quality-gate) driven by the orchestrator. Does not write production code. Only participates in major workflows (always active, not conditional).
 tools: Glob, Grep, LS, Read, Write, Edit, NotebookRead, WebFetch, TodoWrite, WebSearch, Bash, KillShell, BashOutput
-model: sonnet
+model: opus
 color: cyan
 ---
 
