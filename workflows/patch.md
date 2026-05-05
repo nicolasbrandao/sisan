@@ -1,314 +1,242 @@
 # Patch Workflow
 
-This workflow handles bug fixes, hotfixes, typos, config changes, and small isolated changes (1-3 files). It uses 3 agents: PM, Software Engineer, and QA Engineer.
+Bug fixes, hotfixes, typos, config changes, isolated changes (1–5 files). 3 agents: PM, SE, QA.
 
-**Context variables** (provided by the orchestrator from Phase 0):
-- `SPEC_FOLDER`: Path to the spec folder (e.g., `./specs/001-fix-login-timeout/`)
-- `USER_REQUEST`: The user's request with clarifications
-- `TRIAGE_RESULT`: PM's triage classification and rationale
-- `TIER`: `patch`
-- `BRANCH_NAME`: The work branch for this cycle (e.g., `patch/001-fix-login-timeout`)
-- `BASE_BRANCH`: The branch the PR targets (e.g., `main`, or a feature/epic branch if this cycle is part of a larger delivery)
+**Context variables** (from Phase 0):
+- `SPEC_FOLDER` · `USER_REQUEST` · `TRIAGE_RESULT` · `TIER` (= `patch`) · `BRANCH_NAME` · `BASE_BRANCH`
+
+**Standing instruction for every agent prompt below**: include the directive `Do not restate the spec or prior docs. Reference section IDs only (e.g., "AC-2", "plan §Changes"). Lead with results.`
 
 ---
 
 ## Phase 1: Specification
 
-**Goal**: Create a precise spec document that both SE and QA can work from independently.
+**Inputs Manifest**
+- PM (specification): `USER_REQUEST`, `TRIAGE_RESULT`
 
-### Steps:
+### Steps
 
-1. **Launch the `pm` agent in SPECIFICATION mode** (model: `{MODEL_STANDARD}`):
-   - Prompt: "You are in SPECIFICATION mode. Create a detailed specification for the following request. Explore the codebase to understand the affected area, identify risks, and define precise acceptance criteria. Write the spec to `{SPEC_FOLDER}/01-spec.md`. The workflow tier is `patch` -- keep the scope tight. Request: {USER_REQUEST}. Triage context: {TRIAGE_RESULT}"
+1. Launch `pm` in SPECIFICATION mode (`{MODEL_STANDARD}`):
+   - Prompt: "SPECIFICATION mode. Tier: patch — keep scope tight. Request: {USER_REQUEST}. Triage: {TRIAGE_RESULT}. Write to `{SPEC_FOLDER}/01-spec.md`."
 
-2. **Read the spec**: After the PM agent completes, read `{SPEC_FOLDER}/01-spec.md`.
+2. Read `{SPEC_FOLDER}/01-spec.md`.
 
-3. **Present the spec to the user**:
-   - Show a summary: title, type, priority, summary, acceptance criteria count, and any open questions.
-   - If there are open questions, ask the user to answer them.
+3. Present summary to user (title, type, priority, AC count, open questions).
 
-4. **User checkpoint**: Ask the user to approve the spec or request changes.
-   - If changes requested: either re-launch the PM agent with feedback, or edit the spec directly based on user input.
-   - Do not proceed until the user approves the spec.
+4. **User checkpoint**: approve or revise.
 
 ---
 
 ## Phase 2: Discovery
 
-**Goal**: SE and QA independently explore the codebase to understand the work ahead.
+**Inputs Manifest**
+- SE / QA (discovery): `01-spec.md`
+- SE / QA (cross-review): own discovery + counterpart's discovery
 
-### Steps:
+### Steps
 
-1. **Launch two agents in parallel** (model: `{MODEL_STANDARD}`):
+1. Launch in parallel (`{MODEL_STANDARD}`):
 
-   a. **`software-engineer` in DISCOVERY mode**:
-   - Prompt: "You are in DISCOVERY mode. Read the specification at `{SPEC_FOLDER}/01-spec.md`. Explore the codebase to understand the affected code paths, identify the root cause or insertion points, map dependencies, and document conventions. Write your findings to `{SPEC_FOLDER}/02-discovery-se.md`."
+   a. `software-engineer` DISCOVERY: write to `02-discovery-se.md`.
+   b. `qa-engineer` DISCOVERY: write to `02-discovery-qa.md`.
 
-   b. **`qa-engineer` in DISCOVERY mode**:
-   - Prompt: "You are in DISCOVERY mode. Read the specification at `{SPEC_FOLDER}/01-spec.md`. Explore the test infrastructure, identify existing test coverage for the affected area, document test patterns and conventions, and identify coverage gaps. Write your findings to `{SPEC_FOLDER}/02-discovery-qa.md`."
+2. Cross-review round in parallel (`{MODEL_FAST}`):
 
-2. **Wait for both agents to complete.**
+   a. SE reads `02-discovery-qa.md`; appends `## Cross-Review Notes` to `02-discovery-se.md`.
+   b. QA reads `02-discovery-se.md`; appends `## Cross-Review Notes` to `02-discovery-qa.md`.
 
-3. **Cross-review round** — Launch two agents in parallel (model: `{MODEL_FAST}`):
+3. Read both discovery docs.
 
-   a. **`software-engineer` in DISCOVERY mode (cross-review)**:
-   - Prompt: "You are completing a cross-review. Read the QA Engineer's discovery document at `{SPEC_FOLDER}/02-discovery-qa.md`. Then read your own discovery document at `{SPEC_FOLDER}/02-discovery-se.md`. Append a '## Cross-Review Notes' section to your document at `{SPEC_FOLDER}/02-discovery-se.md` with your observations about the QA findings, any alignment or conflicts, and suggestions for the QA Engineer."
+4. Present summary to user (≤6 bullets total — root cause/insertion points, test infra, gaps, cross-review highlights).
 
-   b. **`qa-engineer` in DISCOVERY mode (cross-review)**:
-   - Prompt: "You are completing a cross-review. Read the Software Engineer's discovery document at `{SPEC_FOLDER}/02-discovery-se.md`. Then read your own discovery document at `{SPEC_FOLDER}/02-discovery-qa.md`. Append a '## Cross-Review Notes' section to your document at `{SPEC_FOLDER}/02-discovery-qa.md` with your observations about the SE findings, any alignment or conflicts, and suggestions for the Software Engineer."
-
-4. **Read both discovery documents** (including cross-review notes).
-
-5. **Present a summary to the user**:
-   - Key findings from SE: root cause, affected files, risks
-   - Key findings from QA: test infrastructure, existing coverage, gaps
-   - Any cross-review observations worth highlighting
-
-6. **User checkpoint**: Ask the user if the findings look correct and if they want to proceed to planning.
-   - If the user has additional context, note it for the planning phase.
+5. **User checkpoint**.
 
 ---
 
 ## Phase 3: Planning
 
-**Goal**: SE and QA independently create detailed plans for their respective work.
+**Inputs Manifest**
+- SE (planning): `01-spec.md`, `02-discovery-se.md`, `02-discovery-qa.md`
+- QA (planning): `01-spec.md`, `02-discovery-qa.md`, `02-discovery-se.md`
+- SE/QA (cross-review): own plan + counterpart's plan
 
-### Steps:
+### Steps
 
-1. **Launch two agents in parallel** (model: `{MODEL_STANDARD}`):
+1. Launch in parallel (`{MODEL_STANDARD}`):
 
-   a. **`software-engineer` in PLANNING mode**:
-   - Prompt: "You are in PLANNING mode. Read the following documents: specification at `{SPEC_FOLDER}/01-spec.md`, your discovery at `{SPEC_FOLDER}/02-discovery-se.md`, and the QA discovery at `{SPEC_FOLDER}/02-discovery-qa.md`. Create a detailed implementation plan with the minimal change set needed to satisfy the spec. Include an **Interface Contract** section listing every new or modified function/method signature that QA will need to write tests against before implementation. Write your plan to `{SPEC_FOLDER}/03-plan-se.md`."
+   a. `software-engineer` PLANNING: write to `03-plan-se.md`. Plan must include the **Interface Contract** section (signatures QA tests against).
+   b. `qa-engineer` PLANNING: write to `03-plan-qa.md`. Tests must run against scaffolded interfaces (TDD-RED next).
 
-   b. **`qa-engineer` in PLANNING mode**:
-   - Prompt: "You are in PLANNING mode. Read the following documents: specification at `{SPEC_FOLDER}/01-spec.md`, your discovery at `{SPEC_FOLDER}/02-discovery-qa.md`, and the SE discovery at `{SPEC_FOLDER}/02-discovery-se.md`. Create a detailed test plan mapping every acceptance criterion to specific test cases. Include regression and edge case tests. Note: implementation follows TDD — you will write failing tests FIRST (RED phase), then SE implements (GREEN phase). Design tests that can run against stubs/scaffolded interfaces. Write your plan to `{SPEC_FOLDER}/03-plan-qa.md`."
+2. Cross-review round in parallel (`{MODEL_FAST}`):
 
-2. **Wait for both agents to complete.**
+   a. SE reads `03-plan-qa.md`; appends `## Cross-Review Notes` to `03-plan-se.md` (do contracts support QA's tests?).
+   b. QA reads `03-plan-se.md`; appends `## Cross-Review Notes` to `03-plan-qa.md` (any missing signatures?).
 
-3. **Cross-review round** — Launch two agents in parallel (model: `{MODEL_FAST}`):
+3. Read both plans.
 
-   a. **`software-engineer` in PLANNING mode (cross-review)**:
-   - Prompt: "You are completing a cross-review. Read the QA Engineer's test plan at `{SPEC_FOLDER}/03-plan-qa.md`. Then read your own implementation plan at `{SPEC_FOLDER}/03-plan-se.md`. Append a '## Cross-Review Notes' section to your plan at `{SPEC_FOLDER}/03-plan-se.md`. Comment on whether your interface contracts support QA's test cases, and whether any interface adjustments are needed before QA writes their tests."
+4. Present summary (SE approach, file count; QA test count, AC coverage; cross-review concerns).
 
-   b. **`qa-engineer` in PLANNING mode (cross-review)**:
-   - Prompt: "You are completing a cross-review. Read the Software Engineer's implementation plan at `{SPEC_FOLDER}/03-plan-se.md`. Then read your own test plan at `{SPEC_FOLDER}/03-plan-qa.md`. Append a '## Cross-Review Notes' section to your plan at `{SPEC_FOLDER}/03-plan-qa.md`. Confirm the SE's Interface Contract section has everything you need to write failing tests before implementation begins. Flag any missing signatures or ambiguous contracts."
-
-4. **Read both plans** (including cross-review notes).
-
-5. **Present the plans to the user**:
-   - SE plan: approach, number of files to change, implementation order
-   - QA plan: test strategy, number of test cases, coverage of acceptance criteria
-   - Any cross-review concerns
-
-6. **User checkpoint**: Ask the user to approve both plans before implementation.
-   - **CRITICAL**: Do NOT start implementation without explicit user approval.
-   - If the user wants changes, re-launch the relevant agent(s) with feedback.
+5. **User checkpoint** — **CRITICAL**: do NOT start implementation without explicit approval.
 
 ---
 
 ## Phase 4: Implementation (TDD)
 
-**Goal**: Follow the Red-Green-Refactor cycle. QA writes failing tests first; SE implements to make them pass.
-
-### Steps:
-
-1. **Confirm user approval**: If the user has not explicitly approved, ask now.
+Red-Green-Refactor: QA writes failing tests first; SE implements to make them pass.
 
 ### Phase 4.1 — Scaffold (SE)
 
-2. **Launch `software-engineer` in IMPLEMENTATION mode, SCAFFOLD PHASE** (model: `{MODEL_STANDARD}`):
-   - Prompt: "You are in IMPLEMENTATION mode, SCAFFOLD PHASE. Read your implementation plan at `{SPEC_FOLDER}/03-plan-se.md` and the specification at `{SPEC_FOLDER}/01-spec.md`. Your task right now is to create ONLY the interface scaffolding — function signatures, class stubs, type definitions, module exports — with placeholder bodies (return null/empty/throw NotImplemented). Do NOT implement any business logic yet. The goal is to give QA compilable stubs to write failing tests against. After creating stubs, ensure the project builds without errors. Write your scaffold summary to `{SPEC_FOLDER}/04-scaffold-summary.md` listing every stub created with its file path and signature."
+**Inputs Manifest**: `01-spec.md`, `03-plan-se.md`
 
-3. **Wait for scaffold to complete. Read `{SPEC_FOLDER}/04-scaffold-summary.md`.**
+1. Launch `software-engineer` IMPLEMENTATION mode, **SCAFFOLD PHASE** (`{MODEL_STANDARD}`):
+   - Prompt: "IMPLEMENTATION, SCAFFOLD PHASE. Create stubs only — no business logic. Project must compile. Write `04-scaffold-summary.md`."
+
+2. Read `04-scaffold-summary.md`.
 
 ### Phase 4.2 — TDD Red (QA)
 
-4. **Launch `qa-engineer` in IMPLEMENTATION mode, TDD-RED PHASE** (model: `{MODEL_STANDARD}`):
-   - Prompt: "You are in IMPLEMENTATION mode, TDD-RED PHASE. Read your test plan at `{SPEC_FOLDER}/03-plan-qa.md`, the specification at `{SPEC_FOLDER}/01-spec.md`, and the SE's scaffold summary at `{SPEC_FOLDER}/04-scaffold-summary.md`. Write ALL tests from your test plan now, targeting the scaffolded interfaces. Then run the full test suite. EXPECT the new tests to FAIL — this is correct and required for TDD. Verify: (1) new tests fail with assertion errors (not import/compile errors), and (2) previously passing tests still pass. Document the RED state clearly. Write your TDD-RED report to `{SPEC_FOLDER}/04-tdd-red-report.md`."
+**Inputs Manifest**: `01-spec.md`, `03-plan-qa.md`, `04-scaffold-summary.md`
 
-5. **Wait for QA to complete. Read `{SPEC_FOLDER}/04-tdd-red-report.md`.**
-   - If any new tests pass already (false greens) or fail with compile errors: ask the user how to proceed before continuing.
-   - If previously passing tests now fail: this is a regression from the scaffolding. Ask the user — do NOT proceed automatically.
+3. Launch `qa-engineer` IMPLEMENTATION mode, **TDD-RED PHASE** (`{MODEL_STANDARD}`):
+   - Prompt: "IMPLEMENTATION, TDD-RED PHASE. Write all planned tests against scaffolds. Run suite. Verify: new tests fail with assertion errors, previously-passing tests still pass. Write `04-tdd-red-report.md`."
+
+4. Read `04-tdd-red-report.md`.
+   - If false greens or compile errors: stop, ask user how to proceed.
+   - If pre-existing tests now fail: stop, this is a scaffold regression.
 
 ### Phase 4.3 — TDD Green (SE)
 
-6. **Launch `software-engineer` in IMPLEMENTATION mode, TDD-GREEN PHASE** (model: `{MODEL_STANDARD}`):
-   - Prompt: "You are in IMPLEMENTATION mode, TDD-GREEN PHASE. Read your implementation plan at `{SPEC_FOLDER}/03-plan-se.md`, the specification at `{SPEC_FOLDER}/01-spec.md`, your scaffold summary at `{SPEC_FOLDER}/04-scaffold-summary.md`, and the QA's TDD-RED report at `{SPEC_FOLDER}/04-tdd-red-report.md`. Implement the full business logic for every stub. Your goal: make every failing test from the TDD-RED phase pass without breaking any previously passing tests. Run the full test suite after implementing. Write your implementation summary to `{SPEC_FOLDER}/04-implementation-summary.md` — include which RED tests are now GREEN."
+**Inputs Manifest**: `01-spec.md`, `03-plan-se.md`, `04-scaffold-summary.md`, `04-tdd-red-report.md`
 
-7. **Wait for SE to complete. Read `{SPEC_FOLDER}/04-implementation-summary.md`.**
-   - If tests are still failing: present the failures to the user. Do not proceed to quality gates with failing tests unless the user explicitly approves.
+5. Launch `software-engineer` IMPLEMENTATION mode, **TDD-GREEN PHASE** (`{MODEL_STANDARD}`):
+   - Prompt: "IMPLEMENTATION, TDD-GREEN PHASE. Implement business logic per plan. Goal: every RED test → GREEN, no regressions. Run full suite. Write `04-implementation-summary.md`."
+
+6. Read `04-implementation-summary.md`.
+   - If tests still failing: present to user, do not proceed without explicit approval.
 
 ### Phase 4.4 — Cross-Reviews
 
-8. **Cross-review round** — Launch two agents in parallel (model: `{MODEL_FAST}`):
+**Inputs Manifest**: own implementation/test artifact + counterpart's
 
-   a. **`software-engineer` in IMPLEMENTATION mode (cross-review)**:
-   - Prompt: "You are completing a cross-review. Read the QA Engineer's TDD-RED report at `{SPEC_FOLDER}/04-tdd-red-report.md`. Then read your own implementation summary at `{SPEC_FOLDER}/04-implementation-summary.md`. Append a '## Cross-Review Notes' section to your document at `{SPEC_FOLDER}/04-implementation-summary.md` with observations on whether all RED tests are now GREEN, any interface assumptions in the tests that needed adjustment, and any remaining concerns."
+7. Cross-review round in parallel (`{MODEL_FAST}`):
 
-   b. **`qa-engineer` in IMPLEMENTATION mode (cross-review)**:
-   - Prompt: "You are completing a cross-review. Read the Software Engineer's implementation summary at `{SPEC_FOLDER}/04-implementation-summary.md`. Then read your own TDD-RED report at `{SPEC_FOLDER}/04-tdd-red-report.md`. Append a '## Cross-Review Notes' section to your document at `{SPEC_FOLDER}/04-tdd-red-report.md` with observations on the TDD cycle: did all RED tests turn GREEN, were there any deviations from plan, and does the implementation match what the tests assume? Write the consolidated test report to `{SPEC_FOLDER}/04-test-report.md` (one-page summary: tests written, pass/fail counts, TDD cycle status)."
+   a. SE reads `04-tdd-red-report.md`; appends `## Cross-Review Notes` to `04-implementation-summary.md` (all RED → GREEN? interface assumptions?).
+   b. QA reads `04-implementation-summary.md`; appends `## Cross-Review Notes` to `04-tdd-red-report.md` AND writes the consolidated `04-test-report.md` (≤40 lines: tests written, pass/fail counts, TDD cycle status).
 
-9. **Read all output documents.**
+8. Read all artifacts.
 
-10. **Present results to the user**:
-    - Scaffold: stubs created, build status
-    - TDD-RED: tests written, confirmed failures (count)
-    - TDD-GREEN: implementation complete, tests passing (count)
-    - Any deviations from plan
+9. Present results (scaffold status, RED tests written, GREEN tests passing, deviations).
 
-11. **User checkpoint**: Ask the user to review and proceed to quality gates.
-    - If there are test failures, discuss with the user before proceeding.
+10. **User checkpoint**: review and proceed to quality gates.
 
 ---
 
 ## Phase 5: Quality Gates
 
-**Goal**: Final validation that the implementation meets the spec.
+**Inputs Manifest**
+- QA (quality gate): `01-spec.md`, `04-implementation-summary.md`, `04-tdd-red-report.md`, `04-test-report.md`, modified files
+- SE (test review): `04-tdd-red-report.md`, `04-test-report.md`, test files
 
-### Steps:
+### Steps
 
-1. **Launch two agents in parallel** (model: `{MODEL_STANDARD}`):
+1. Launch in parallel (`{MODEL_STANDARD}`):
 
-   a. **`qa-engineer` in QUALITY GATE mode**:
-   - Prompt: "You are in QUALITY GATE mode. This is the final validation. Read the specification at `{SPEC_FOLDER}/01-spec.md`, the implementation summary at `{SPEC_FOLDER}/04-implementation-summary.md`, the TDD-RED report at `{SPEC_FOLDER}/04-tdd-red-report.md`, and the test report at `{SPEC_FOLDER}/04-test-report.md`. Review the actual code changes by reading the modified files. Run the full test suite. Validate every acceptance criterion. Write the quality gate report to `{SPEC_FOLDER}/05-quality-gate.md`."
+   a. `qa-engineer` QUALITY GATE: read code changes, run full suite, validate every AC. Write `05-quality-gate.md`.
+   b. `software-engineer` QUALITY GATE (test review): read test code. Write `05-quality-gate-se.md`.
 
-   b. **`software-engineer` in QUALITY GATE mode**:
-   - Prompt: "You are in QUALITY GATE mode (test review). Read the TDD-RED report at `{SPEC_FOLDER}/04-tdd-red-report.md` and the test report at `{SPEC_FOLDER}/04-test-report.md`. Review the actual test code. Assess test correctness, TDD cycle completeness (all RED tests now GREEN), coverage adequacy, and test quality. Write your review to `{SPEC_FOLDER}/05-quality-gate-se.md`."
+2. After both complete, launch `qa-engineer` final reflection (`{MODEL_FAST}`):
+   - Prompt: "Append `## Software Engineer — Test Quality Review` to `05-quality-gate.md` (copy from `05-quality-gate-se.md`), then append `## QA Engineer — Final Reflection` confirming or revising your verdict."
 
-2. **After both complete, launch `qa-engineer` in QUALITY GATE mode (final reflection)** (model: `{MODEL_FAST}`):
-   - Prompt: "You are completing a final reflection. Read the quality gate report at `{SPEC_FOLDER}/05-quality-gate.md` and the SE's test quality review at `{SPEC_FOLDER}/05-quality-gate-se.md`. Append a '## Software Engineer - Test Quality Review' section to `{SPEC_FOLDER}/05-quality-gate.md` (copying the SE's content), then append a '## QA Engineer - Final Reflection' section acknowledging the SE's findings and confirming or revising your overall verdict."
+3. Read `05-quality-gate.md`.
 
-4. **Read the quality gate report.**
+4. Present results: QA verdict (APPROVED / WITH CONDITIONS / REJECTED), AC results, SE test assessment, recommendation.
 
-5. **Present results to the user**:
-   - QA verdict: APPROVED / APPROVED WITH CONDITIONS / REJECTED
-   - Acceptance criteria results (PASS/FAIL per criterion)
-   - Any blockers or conditions
-   - SE's test quality assessment
-   - Overall recommendation
-
-6. **Handle the verdict**:
-
-   a. **APPROVED**: Proceed to Phase 6 (Merge).
-
-   b. **APPROVED WITH CONDITIONS**: Present the conditions to the user. Ask if they want to:
-      - Address the conditions now (loop back to Phase 4 with specific fixes)
-      - Accept the conditions and proceed to merge (create follow-up tasks)
-      - Stop and address later
-
-   c. **REJECTED**: Present the required fixes to the user. Ask if they want to:
-      - Fix the issues (loop back to Phase 4 -- re-launch SE and/or QA with the specific issues to address)
-      - Stop and address later
-      - Override the rejection and merge anyway (warn that this bypasses quality gates)
+5. Handle verdict:
+   - **APPROVED**: → Phase 6.
+   - **APPROVED WITH CONDITIONS**: ask user — address now (loop to Phase 4) | accept and merge | stop.
+   - **REJECTED**: ask user — fix (loop to Phase 4) | stop | override (warn).
 
 ---
 
 ## Phase 6: Merge
 
-**Goal**: Create a PR with a comprehensive summary targeting the correct base branch.
+### Steps
 
-### Steps:
+1. **Assemble PR summary** (deterministic — extract, do not paraphrase, no agent invocation):
 
-1. **Generate the PR summary**: Create `{SPEC_FOLDER}/06-pr-summary.md` with this structure:
+   Create `{SPEC_FOLDER}/06-pr-summary.md` by extracting (verbatim where possible):
 
    ```markdown
-   # PR Summary
-
-   ## Title
-   [Short descriptive title from the spec]
+   # [spec title]
 
    ## Summary
-   [2-3 sentences from the spec summary]
+   [Copy spec §Summary verbatim]
 
-   ## Changes Made
-   [From 04-implementation-summary.md]
+   ## Changes
+   [Copy 04-implementation-summary.md §Changes]
 
    ## Tests
-   [From 04-test-report.md - summary of tests written and results]
+   [Copy 04-test-report.md §Run + §AC Coverage]
 
    ## Quality Gate
-   [From 05-quality-gate.md - verdict and key findings]
+   - **Verdict:** [from 05-quality-gate.md §Verdict]
+   - **AC results:** [from 05-quality-gate.md §AC Validation table]
+   [Add SE test review verdict line.]
 
-   ## Acceptance Criteria Status
-   [From 05-quality-gate.md - PASS/FAIL per criterion]
-
-   ## Branch Info
-   - **Work branch**: `{BRANCH_NAME}`
-   - **Target branch**: `{BASE_BRANCH}`
+   ## Branch
+   `{BRANCH_NAME}` → `{BASE_BRANCH}`
 
    ## Spec Folder
    `{SPEC_FOLDER}`
    ```
 
-2. **Verify branch state**:
-   - Confirm you are on the correct work branch (`{BRANCH_NAME}`). If not, check it out.
-   - The work branch should have been created during Phase 0 (Intake & Triage).
-   - If the branch does not exist for some reason, create it now from `{BASE_BRANCH}`.
-   - **NEVER commit or push directly to `main` or to the base branch.** All changes go through a PR.
+   Target: ≤80 lines. No re-narration; no new commentary.
 
-3. **Stage and commit changes**:
-   - Stage the code changes and test changes.
-   - Stage the spec folder so the audit trail is preserved in the repo.
-   - Commit with a descriptive message referencing the spec ID and title.
-   - Example: `fix: resolve login timeout on session expiry (specs/001-fix-login-timeout)`
+2. **Verify branch**: confirm on `{BRANCH_NAME}`. Never commit to `main` or to `{BASE_BRANCH}` directly.
+
+3. **Stage and commit**:
+   - Stage code changes, test changes, and the spec folder.
+   - Commit message: `fix: {short description} (specs/{id}-{slug})`
 
 4. **Push and create PR**:
-   - Push the work branch to the remote with `-u` flag.
-   - Create a PR using `gh pr create`:
-     - `--base {BASE_BRANCH}` to target the correct branch (this is critical -- do NOT default to main if a different base was specified)
-     - `--title` from the spec title
-     - `--body` from `06-pr-summary.md`
-   - Example: `gh pr create --base main --title "Fix login timeout on session expiry" --body "$(cat specs/001-fix-login-timeout/06-pr-summary.md)"`
+   - `git push -u origin {BRANCH_NAME}`
+   - `gh pr create --base {BASE_BRANCH} --title "{spec title}" --body "$(cat {SPEC_FOLDER}/06-pr-summary.md)"`
 
-5. **GitHub merge checkpoint** — present the PR and wait in a loop until it is merged:
+5. **GitHub merge checkpoint** — present the PR URL and wait until the user confirms:
 
    ```
    ⏸ GitHub Merge Required
-   PR has been created: {PR URL}
-   Please go to GitHub, review the PR, and merge it into `{BASE_BRANCH}`.
-
-   Once done, reply with one of:
-   - "merged" / "done" → to complete the workflow
-   - "changes requested" → I'll read the review comments and address them
+   PR created: {PR URL}
+   Reply: "merged" / "done" → complete · "changes requested" → handle review
    ```
 
-   **If the user replies "changes requested"** — repeat the following until the user confirms the merge:
+   **If "changes requested"**: loop until merge confirmed.
 
    a. Launch `software-engineer` in **PR REVIEW RESPONSE mode**:
-      - Prompt: "You are in PR REVIEW RESPONSE mode. Fetch all review comments using `gh pr view {PR_NUMBER} --comments` and `gh pr diff {PR_NUMBER}`. For each comment: (1) If you agree, make the code change and explain what you did. (2) If you need clarification, formulate a specific question for the user. (3) If you disagree, prepare a concise, professional pushback explaining your reasoning. Commit and push any code changes to the same branch. Write a response summary to `{SPEC_FOLDER}/06-pr-review-response.md` (append if it already exists) listing each comment and how it was handled."
+      - Prompt: "PR REVIEW RESPONSE mode. Fetch comments via `gh pr view {PR_NUMBER} --comments` and `gh pr diff {PR_NUMBER}`. For each: (1) agree → make change, explain; (2) need clarification → formulate question for user; (3) disagree → professional pushback. Commit and push to the same branch. Append to `{SPEC_FOLDER}/06-pr-review-response.md`."
 
-   b. Read `{SPEC_FOLDER}/06-pr-review-response.md`. Present each comment and its resolution.
+   b. Read `06-pr-review-response.md`. Present each comment + resolution.
 
-   c. If any comments required user clarification: ask the user, then re-launch SE with the answers and repeat from (a).
+   c. If clarification needed: ask user, then re-launch SE.
 
-   d. Once all comments are addressed, loop back to the checkpoint:
-      ```
-      ⏸ GitHub Merge Required (updated)
-      Changes have been pushed. Please re-review the PR on GitHub.
-
-      Reply with:
-      - "merged" / "done" → to complete the workflow
-      - "changes requested" → I'll address the new round of comments
-      ```
-
-   **This loop repeats until the user replies "merged" / "done".** Do not proceed past this point until that confirmation is received.
+   d. After all addressed, return to checkpoint.
 
 6. **Mark all todos complete.**
 
+---
 
 ### Branching Rules
 
-- **Patch (single cycle)**: `patch/{id}-{slug}` → PR to `main` (or user-specified base)
-- **Patch (part of minor multi-cycle)**: `patch/{id}-{slug}` → PR to the parent feature branch `minor/{parent-id}-{parent-slug}`
-- **Patch (part of major multi-cycle)**: `patch/{id}-{slug}` → PR to the parent epic branch `epic/{parent-id}-{parent-slug}`
-- **NEVER** push directly to `main`, `master`, or any shared branch unless the user explicitly requests it
-- If the user overrides and asks to push directly, warn them once, then comply if they confirm
+- **Patch (single cycle)**: `patch/{id}-{slug}` → PR to `main` (or user-specified base).
+- **Patch (part of minor multi-cycle)**: → PR to parent feature branch `minor/{parent-id}-{parent-slug}`.
+- **Patch (part of major multi-cycle)**: → PR to parent epic branch `epic/{parent-id}-{parent-slug}`.
+- **NEVER** push directly to `main`/`master`/shared branches unless explicitly requested.
 
 ---
 
 ## Error Recovery
 
-- **Agent fails or returns incomplete output**: Inform the user. Offer to re-launch the agent or proceed manually.
-- **Tests fail during implementation**: Document in the test report. Discuss with user during the checkpoint -- it may be a test issue or an implementation issue.
-- **Quality gate rejects**: This is expected workflow. Loop back to implementation with specific fixes.
-- **User wants to stop mid-workflow**: That's fine. All documents written so far are preserved in the spec folder. The user can resume later by re-running `/sisan` and pointing to the existing spec folder (future enhancement).
+- **Agent fails or returns incomplete output**: inform user; offer re-launch or manual.
+- **Tests fail in implementation**: document; discuss with user.
+- **Quality gate rejects**: expected workflow; loop to Phase 4 with specific fixes.
+- **User wants to stop mid-workflow**: spec folder is preserved; resume later.

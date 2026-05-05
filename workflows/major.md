@@ -1,341 +1,222 @@
 # Major Workflow
 
-This workflow handles large features, new systems, cross-service changes, and infrastructure-level work (4+ PRs, 15+ files, 1+ services). It uses up to 7 agents: PM, Software Architect, Tech Lead, Software Engineer, QA Engineer, and optionally UI/UX Specialist and DevOps Engineer.
+Large features, new systems, cross-service changes (4+ PRs, 15+ files, 1+ services). Up to 7 agents: PM, Software Architect, Tech Lead, SE, QA, optionally UI/UX, optionally DevOps, optionally Database Architect.
 
-**Context variables** (provided by the orchestrator from Phase 0):
-- `SPEC_FOLDER`: Path to the spec folder (e.g., `./specs/003-new-auth-system/`)
-- `USER_REQUEST`: The user's request with clarifications
-- `TRIAGE_RESULT`: PM's triage classification and rationale
-- `TIER`: `major`
-- `BRANCH_NAME`: The epic branch for this workflow (e.g., `epic/003-new-auth-system`)
-- `BASE_BRANCH`: The branch the final PR targets (e.g., `main`)
-- `CYCLE_CONTEXT`: Multi-cycle context if applicable
-- `BRANCHING_STRATEGY`: The full branching plan from triage
+**Context variables** (from Phase 0):
+- `SPEC_FOLDER` · `USER_REQUEST` · `TRIAGE_RESULT` · `TIER` (= `major`) · `BRANCH_NAME` · `BASE_BRANCH` · `CYCLE_CONTEXT` · `BRANCHING_STRATEGY`
+
+**Standing instruction for every agent prompt below**: include the directive `Do not restate the spec or prior docs. Reference section IDs only. Lead with results.`
 
 ---
 
 ## Phase 1: Specification
 
-**Goal**: Create a comprehensive spec that addresses cross-service concerns, infrastructure needs, and UI changes.
+**Inputs Manifest**: `USER_REQUEST`, `TRIAGE_RESULT`
 
-### Steps:
+### Steps
 
-1. **Launch the `pm` agent in SPECIFICATION mode**:
-   - Prompt: "You are in SPECIFICATION mode. Create a detailed specification for the following request. Explore the codebase to understand the affected area, identify risks, and define precise acceptance criteria. Write the spec to `{SPEC_FOLDER}/01-spec.md`. The workflow tier is `major` — this is a large feature or cross-service change. Be thorough with ALL 'Affected Areas' subsections: (1) 'UI' — describe any UI changes clearly, as this determines whether a UI/UX Specialist will be activated. (2) 'Infrastructure' — describe any CI/CD, deployment, monitoring, or scaling changes, as this determines whether a DevOps Engineer will be activated. (3) 'Cross-Service' — describe any inter-service communication, shared data, or API contract changes, as this informs the Software Architect's review depth. (4) 'Database' — describe any schema, entity, or migration changes, as this determines whether a Database Architect will be activated. Mark any section as 'None' if not applicable. Also detail the delivery strategy — how many PRs are recommended, what each covers, and any ordering dependencies between them. Request: {USER_REQUEST}. Triage context: {TRIAGE_RESULT}"
+1. Launch `pm` SPECIFICATION (`{MODEL_STANDARD}`):
+   - Prompt: "SPECIFICATION mode. Tier: major. Be thorough on ALL `Affected Areas` subsections — UI (triggers UI/UX), Database (triggers DB Architect), Infrastructure (triggers DevOps), Cross-Service (informs SA depth). Mark `None` if not applicable. Detail delivery strategy. Request: {USER_REQUEST}. Triage: {TRIAGE_RESULT}. Write to `{SPEC_FOLDER}/01-spec.md`."
 
-2. **Read the spec**: After the PM agent completes, read `{SPEC_FOLDER}/01-spec.md`.
+2. Read `01-spec.md`.
 
-3. **Present the spec to the user**:
-   - Show: title, type, priority, summary, acceptance criteria count, PR decomposition strategy.
-   - Highlight activation flags:
-     - **UI changes detected**: UI/UX Specialist will be activated (or "No UI changes — UI/UX Specialist will be skipped")
-     - **Infrastructure changes detected**: DevOps Engineer will be activated (or "No infra changes — DevOps Engineer will be skipped")
-     - **Cross-service scope**: Software Architect will review (always active in major)
-   - If there are open questions, ask the user to answer them.
+3. Present summary. Highlight activation flags: **UI active?** **DB active?** **DevOps active?** **SA always active.**
 
-4. **User checkpoint**: Ask the user to approve the spec or request changes.
+4. **User checkpoint**.
 
 ---
 
 ## Phase 1.5: UI/UX Spec Review (CONDITIONAL)
 
-**Goal**: Augment the spec with UI-specific acceptance criteria, accessibility requirements, and design system guidance.
+**Activation**: spec `Affected Areas > UI` non-empty.
 
-### Activation Check:
+**Inputs Manifest**: `01-spec.md`
 
-1. **Read the spec** `{SPEC_FOLDER}/01-spec.md`.
-2. **Check `Affected Areas > UI`**: If empty/"None"/"N/A" → SKIP. Otherwise → ACTIVATE.
-
-### Steps (only if activated):
-
-1. **Launch `ui-ux-specialist` in SPEC REVIEW mode**:
-   - Prompt: "You are in SPEC REVIEW mode. Read the specification at `{SPEC_FOLDER}/01-spec.md`. Explore the codebase to understand the existing design system, component library, CSS methodology, accessibility patterns, and responsive breakpoints. Augment the spec with UI-specific acceptance criteria, accessibility requirements, responsive behavior expectations, and design system components to reuse. Write your review to `{SPEC_FOLDER}/01-spec-ui-review.md`."
-
-2. **Read the UI spec review**. Present to user. **User checkpoint**.
+1. Launch `ui-ux-specialist` SPEC REVIEW (`{MODEL_STANDARD}`) → `01-spec-ui-review.md`.
+2. Read, present, **user checkpoint**.
 
 ---
 
 ## Phase 1.6: Database Spec Review (CONDITIONAL)
 
-**Goal**: Identify database requirements early — schema changes, migration safety concerns, index strategy, and query performance implications — before architecture review begins.
+**Activation**: spec `Affected Areas > Database` non-empty.
 
-### Activation Check:
+**Inputs Manifest**: `01-spec.md` (+ UI review if active)
 
-1. **Read the spec** `{SPEC_FOLDER}/01-spec.md`.
-2. **Check `Affected Areas > Database`**: If empty/"None"/"N/A" → SKIP. Print: "No database changes detected — skipping Database Spec Review." Otherwise → ACTIVATE.
-
-### Steps (only if activated):
-
-1. **Launch `database-architect` in SPEC REVIEW mode**:
-   - Prompt: "You are in SPEC REVIEW mode. Read the specification at `{SPEC_FOLDER}/01-spec.md`{if UI/UX active: ' and the UI spec review at `{SPEC_FOLDER}/01-spec-ui-review.md`'}. Explore the codebase to understand the existing database schema, ORM configuration, migration history, entity definitions, and query patterns. Augment the spec with database-specific acceptance criteria, schema change requirements, migration safety concerns, index strategy, and query performance guidance. Write your review to `{SPEC_FOLDER}/01-spec-db-review.md`."
-
-2. **Read the database spec review**. Present to user. **User checkpoint**.
+1. Launch `database-architect` SPEC REVIEW (`{MODEL_STANDARD}`) → `01-spec-db-review.md`.
+2. Read, present, **user checkpoint**.
 
 ---
 
 ## Phase 1.7: Architecture Spec Review (ALWAYS ACTIVE)
 
-**Goal**: The Software Architect maps the system topology, identifies affected services, defines data ownership, and flags cross-service concerns before discovery begins. This establishes the system context for all agents.
+**Inputs Manifest**: `01-spec.md` (+ UI review if active, + DB review if active)
 
-### Steps:
+1. Launch `software-architect` SPEC REVIEW (`{MODEL_THOROUGH}`):
+   - Prompt: "SPEC REVIEW mode. Map system topology. Identify affected services, data ownership, contract changes, cross-service flow, BC concerns. Draft initial ADRs. Recommend PR phasing. Write to `{SPEC_FOLDER}/01-spec-arch-review.md`."
 
-1. **Launch `software-architect` in SPEC REVIEW mode** (model: `{MODEL_THOROUGH}`):
-   - Prompt: "You are in SPEC REVIEW mode. Read the specification at `{SPEC_FOLDER}/01-spec.md`{if UI/UX active: ' and the UI spec review at `{SPEC_FOLDER}/01-spec-ui-review.md`'}{if database-architect active: ' and the database spec review at `{SPEC_FOLDER}/01-spec-db-review.md`'}. Explore the codebase to map the current system topology — services, databases, message queues, API gateways, shared libraries. Identify affected services, data ownership boundaries, API contracts that need to change or be created, cross-service data flow, and backward compatibility concerns. Draft initial Architecture Decision Records (ADRs) for significant decisions. Recommend a PR phasing strategy based on service dependencies. Write your review to `{SPEC_FOLDER}/01-spec-arch-review.md`."
+2. Read. Present (topology summary, affected services, data ownership, contracts, BC, ADR drafts, PR phasing). If SA recommends re-scope: highlight.
 
-2. **Read the architecture spec review**: After the SA completes, read `{SPEC_FOLDER}/01-spec-arch-review.md`.
-
-3. **Present findings to user**:
-   - System topology summary and affected services
-   - Data ownership implications
-   - API contracts that will change or be created
-   - Backward compatibility assessment
-   - ADR drafts (decisions being made)
-   - Recommended PR phasing
-   - **If SA recommends re-scope** (e.g., "split into two epics"): present prominently.
-
-4. **User checkpoint**: Ask the user to approve the system architecture assessment. This shapes all subsequent phases.
+3. **User checkpoint** — this shapes all subsequent phases.
 
 ---
 
 ## Phase 1.9: DevOps Spec Review (CONDITIONAL)
 
-**Goal**: Identify infrastructure requirements early — deployment strategy, CI/CD changes, environment config, monitoring needs.
+**Activation**: spec `Affected Areas > Infrastructure` non-empty.
 
-### Activation Check:
+**Inputs Manifest**: `01-spec.md`, `01-spec-arch-review.md`
 
-1. **Read the spec** `{SPEC_FOLDER}/01-spec.md`.
-2. **Check `Affected Areas > Infrastructure`**: If empty/"None"/"N/A" → SKIP. Otherwise → ACTIVATE.
+### Steps (only if activated)
 
-### Steps (only if activated):
+1. Launch `devops-engineer` SPEC REVIEW (`{MODEL_STANDARD}`) → `01-spec-infra-review.md`.
 
-1. **Launch `devops-engineer` in SPEC REVIEW mode** (model: `{MODEL_STANDARD}`):
-   - Prompt: "You are in SPEC REVIEW mode. Read the specification at `{SPEC_FOLDER}/01-spec.md` and the architecture spec review at `{SPEC_FOLDER}/01-spec-arch-review.md`. Explore the codebase to understand the current CI/CD pipelines, deployment topology, Infrastructure as Code, monitoring, and environment configuration. Identify infrastructure requirements, deployment strategy needs, environment configuration needs, and monitoring requirements. Write your review to `{SPEC_FOLDER}/01-spec-infra-review.md`."
+2. Read, present (combined with Phase 1.7 results), **user checkpoint**.
 
-2. **Read the infra spec review**. Present to user combined with Phase 1.7 results if both present. **User checkpoint**.
+3. Cross-review round in parallel (`{MODEL_FAST}`):
 
-3. **Cross-review round** — Launch two agents in parallel (model: `{MODEL_FAST}`):
+   a. SA reads infra review; appends `## Cross-Review Notes` to `01-spec-arch-review.md`.
+   b. DevOps reads SA review; appends `## Cross-Review Notes` to `01-spec-infra-review.md`.
 
-   a. **`software-architect` in SPEC REVIEW mode (cross-review)**:
-   - Prompt: "You are completing a cross-review. Read the DevOps Engineer's infrastructure spec review at `{SPEC_FOLDER}/01-spec-infra-review.md`. Then read your own architecture spec review at `{SPEC_FOLDER}/01-spec-arch-review.md`. Append a '## Cross-Review Notes' section to your document at `{SPEC_FOLDER}/01-spec-arch-review.md` with your observations about whether the architecture decisions are feasible from an infrastructure perspective, any conflicts between architectural choices and infrastructure constraints, and any concerns."
-
-   b. **`devops-engineer` in SPEC REVIEW mode (cross-review)**:
-   - Prompt: "You are completing a cross-review. Read the Software Architect's architecture spec review at `{SPEC_FOLDER}/01-spec-arch-review.md`. Then read your own infrastructure spec review at `{SPEC_FOLDER}/01-spec-infra-review.md`. Append a '## Cross-Review Notes' section to your document at `{SPEC_FOLDER}/01-spec-infra-review.md` with your observations about infrastructure feasibility gaps or confirmations in the SA's architecture, any deployment complexity the architecture creates, and any concerns."
-
-**Track activation status**: Remember which conditional agents (UI/UX, Database Architect, DevOps) are active. This determines their participation in all subsequent phases.
+**Track active states (UI, DB, DevOps).**
 
 ---
 
 ## Phase 2: Discovery
 
-**Goal**: All agents explore the codebase independently. SA maps the system landscape. DevOps maps infrastructure. SE and QA explore their respective domains. Then cross-reviews, then TL reviews everything.
+**Inputs Manifest**
+- SE / QA: `01-spec.md`, all spec reviews (UI, arch, DB, infra) that are active
+- SA: `01-spec.md`, `01-spec-arch-review.md` (+ DB review if active)
+- UI/UX (active only): `01-spec.md`, `01-spec-ui-review.md`
+- DevOps (active only): `01-spec.md`, `01-spec-arch-review.md`, `01-spec-infra-review.md`
+- DB Architect (active only): `01-spec.md`, `01-spec-db-review.md`, `01-spec-arch-review.md` (+ infra review if active)
+- TL (sequential, after cross-reviews): all of the above + all discovery docs + cross-review notes
 
-### Steps:
+### Steps
 
-1. **Launch agents in parallel** (model: `{MODEL_STANDARD}` for SE/QA/UI/DevOps/DBA, `{MODEL_THOROUGH}` for SA; 3–6 agents depending on conditional activations):
+1. Launch in parallel (`{MODEL_STANDARD}` for SE/QA/UI/DevOps/DBA, `{MODEL_THOROUGH}` for SA, 3–6 agents):
 
-   a. **`software-engineer` in DISCOVERY mode**:
-   - Prompt: "You are in DISCOVERY mode. Read the specification at `{SPEC_FOLDER}/01-spec.md`{if UI/UX active: ', the UI spec review at `{SPEC_FOLDER}/01-spec-ui-review.md`'}, and the architecture spec review at `{SPEC_FOLDER}/01-spec-arch-review.md`{if DevOps active: ', and the infrastructure spec review at `{SPEC_FOLDER}/01-spec-infra-review.md`'}{if database-architect active: ', and the database spec review at `{SPEC_FOLDER}/01-spec-db-review.md`'}. Explore the codebase to understand the affected code paths, identify root causes or insertion points, map dependencies, and document conventions. In major workflows, pay special attention to the SA's API contracts and service boundaries — your implementation must conform to them. Write your findings to `{SPEC_FOLDER}/02-discovery-se.md`."
+   a. `software-engineer` DISCOVERY → `02-discovery-se.md` (must conform to SA's contracts)
+   b. `qa-engineer` DISCOVERY → `02-discovery-qa.md`
+   c. `software-architect` DISCOVERY → `02-discovery-sa.md`
+   d. `ui-ux-specialist` DISCOVERY (if UI active) → `02-discovery-ui.md`
+   e. `devops-engineer` DISCOVERY (if DevOps active) → `02-discovery-devops.md`
+   f. `database-architect` DISCOVERY (if DB active) → `02-discovery-db.md`
 
-   b. **`qa-engineer` in DISCOVERY mode**:
-   - Prompt: "You are in DISCOVERY mode. Read the specification at `{SPEC_FOLDER}/01-spec.md`{if UI/UX active: ', the UI spec review at `{SPEC_FOLDER}/01-spec-ui-review.md`'}, and the architecture spec review at `{SPEC_FOLDER}/01-spec-arch-review.md`{if DevOps active: ', and the infrastructure spec review at `{SPEC_FOLDER}/01-spec-infra-review.md`'}{if database-architect active: ', and the database spec review at `{SPEC_FOLDER}/01-spec-db-review.md`'}. Explore the test infrastructure, identify existing test coverage, document test patterns and conventions, and identify coverage gaps. For major workflows, also identify cross-service integration test opportunities based on the SA's architecture review. Write your findings to `{SPEC_FOLDER}/02-discovery-qa.md`."
+2. Cross-review round in parallel (`{MODEL_FAST}`, 3–6):
 
-   c. **`software-architect` in DISCOVERY mode**:
-   - Prompt: "You are in DISCOVERY mode. Read the specification at `{SPEC_FOLDER}/01-spec.md` and your architecture spec review at `{SPEC_FOLDER}/01-spec-arch-review.md`{if database-architect active: ' and the database spec review at `{SPEC_FOLDER}/01-spec-db-review.md`'}. Map the service dependency graph, inventory API contracts, trace end-to-end data flows, identify integration patterns, audit shared state, and analyze failure modes. Write your findings to `{SPEC_FOLDER}/02-discovery-sa.md`."
+   a. SE reads QA + SA discovery; appends to `02-discovery-se.md`.
+   b. QA reads SE discovery; appends to `02-discovery-qa.md`.
+   c. SA reads SE (+ DevOps if active, + DB if active); appends to `02-discovery-sa.md`.
+   d. (UI active) UI reads SE; appends to `02-discovery-ui.md`.
+   e. (DevOps active) DevOps reads SE + SA; appends to `02-discovery-devops.md`.
+   f. (DB active) DB reads SE + SA; appends to `02-discovery-db.md`.
 
-   d. **`ui-ux-specialist` in DISCOVERY mode** (only if activated):
-   - Prompt: "You are in DISCOVERY mode. Read the specification at `{SPEC_FOLDER}/01-spec.md` and your spec review at `{SPEC_FOLDER}/01-spec-ui-review.md`. Map the existing UI architecture of the affected area — component tree, styling patterns, accessibility state, and reusable elements. Write your findings to `{SPEC_FOLDER}/02-discovery-ui.md`."
+3. Launch `tech-lead` DISCOVERY REVIEW sequentially (`{MODEL_STANDARD}`) → `02-discovery-tl.md`.
 
-   e. **`devops-engineer` in DISCOVERY mode** (only if activated):
-   - Prompt: "You are in DISCOVERY mode. Read the specification at `{SPEC_FOLDER}/01-spec.md`, the architecture spec review at `{SPEC_FOLDER}/01-spec-arch-review.md`, and your infrastructure spec review at `{SPEC_FOLDER}/01-spec-infra-review.md`. Map the CI/CD pipelines, deployment topology, IaC inventory, environment configuration, monitoring, and scaling configuration. Write your findings to `{SPEC_FOLDER}/02-discovery-devops.md`."
+4. Read all discovery docs.
 
-   f. **`database-architect` in DISCOVERY mode** (only if activated in Phase 1.6):
-   - Prompt: "You are in DISCOVERY mode. Read the specification at `{SPEC_FOLDER}/01-spec.md`, the database spec review at `{SPEC_FOLDER}/01-spec-db-review.md`, the architecture spec review at `{SPEC_FOLDER}/01-spec-arch-review.md`{if DevOps active: ', and the infrastructure spec review at `{SPEC_FOLDER}/01-spec-infra-review.md`'}. Map the existing database schema, ORM configuration, migration inventory, query patterns, and index coverage. Write your findings to `{SPEC_FOLDER}/02-discovery-db.md`."
+5. Present summary (SA system findings, DevOps infra findings, DB findings if active, TL code-level concerns, cross-review highlights). Highlight any re-scope recommendation.
 
-2. **Wait for all agents to complete.**
-
-3. **Cross-review round** — Launch agents in parallel (model: `{MODEL_FAST}`, 3–6):
-
-   a. **`software-engineer` cross-review**:
-   - Prompt: "You are completing a cross-review. Read the QA Engineer's discovery at `{SPEC_FOLDER}/02-discovery-qa.md` and the Software Architect's discovery at `{SPEC_FOLDER}/02-discovery-sa.md`. Then read your own discovery at `{SPEC_FOLDER}/02-discovery-se.md`. Append a '## Cross-Review Notes' section with observations about QA and SA findings, system-level implications of your code-level findings, and any alignment or conflicts."
-
-   b. **`qa-engineer` cross-review**:
-   - Prompt: "You are completing a cross-review. Read the Software Engineer's discovery at `{SPEC_FOLDER}/02-discovery-se.md`. Then read your own discovery at `{SPEC_FOLDER}/02-discovery-qa.md`. Append a '## Cross-Review Notes' section with observations about SE findings, alignment or conflicts, and suggestions."
-
-   c. **`software-architect` cross-review**:
-   - Prompt: "You are completing a cross-review. Read the SE's discovery at `{SPEC_FOLDER}/02-discovery-se.md`{if DevOps active: ' and the DevOps discovery at `{SPEC_FOLDER}/02-discovery-devops.md`'}{if database-architect active: ' and the database discovery at `{SPEC_FOLDER}/02-discovery-db.md`'}. Then read your own discovery at `{SPEC_FOLDER}/02-discovery-sa.md`. Append a '## Cross-Review Notes' section with observations about system-level implications of the SE's findings{if DevOps active: ' and architectural alignment of the DevOps findings'}{if database-architect active: ' and alignment of the DB findings with service data boundaries'}."
-
-   d. **`ui-ux-specialist` cross-review** (only if activated):
-   - Prompt: "You are completing a cross-review. Read the SE's discovery at `{SPEC_FOLDER}/02-discovery-se.md`. Then read your own discovery at `{SPEC_FOLDER}/02-discovery-ui.md`. Append a '## Cross-Review Notes' section with observations about UI implications of the SE's findings."
-
-   e. **`devops-engineer` cross-review** (only if activated):
-   - Prompt: "You are completing a cross-review. Read the SE's discovery at `{SPEC_FOLDER}/02-discovery-se.md` and the SA's discovery at `{SPEC_FOLDER}/02-discovery-sa.md`. Then read your own discovery at `{SPEC_FOLDER}/02-discovery-devops.md`. Append a '## Cross-Review Notes' section with observations about deployment implications of the SE's findings and infrastructure feasibility of the SA's architecture."
-
-   f. **`database-architect` cross-review** (only if activated):
-   - Prompt: "You are completing a cross-review. Read the Software Engineer's discovery at `{SPEC_FOLDER}/02-discovery-se.md` and the Software Architect's discovery at `{SPEC_FOLDER}/02-discovery-sa.md`. Then read your own discovery at `{SPEC_FOLDER}/02-discovery-db.md`. Append a '## Cross-Review Notes' section to your document at `{SPEC_FOLDER}/02-discovery-db.md` with observations about the SE's data access patterns, and any service boundary concerns the SA identified that may affect the database layer."
-
-4. **Wait for cross-reviews to complete.**
-
-5. **Launch `tech-lead` in DISCOVERY REVIEW mode** (sequential — after cross-reviews):
-   - Prompt: "You are in DISCOVERY REVIEW mode. Read the specification at `{SPEC_FOLDER}/01-spec.md`, the architecture spec review at `{SPEC_FOLDER}/01-spec-arch-review.md`{if UI/UX active: ', the UI spec review at `{SPEC_FOLDER}/01-spec-ui-review.md`'}{if DevOps active: ', the infrastructure spec review at `{SPEC_FOLDER}/01-spec-infra-review.md`'}, the SE discovery at `{SPEC_FOLDER}/02-discovery-se.md`, the QA discovery at `{SPEC_FOLDER}/02-discovery-qa.md`, the SA discovery at `{SPEC_FOLDER}/02-discovery-sa.md`{if UI/UX active: ', the UI/UX discovery at `{SPEC_FOLDER}/02-discovery-ui.md`'}{if DevOps active: ', the DevOps discovery at `{SPEC_FOLDER}/02-discovery-devops.md`'}{if database-architect active: ', the database discovery at `{SPEC_FOLDER}/02-discovery-db.md`'}. Assess the architectural implications from a code-level perspective. Note: the Software Architect handles system-level architecture; your focus is code-level architecture within each service. Write your findings to `{SPEC_FOLDER}/02-discovery-tl.md`."
-
-6. **Read all discovery documents.**
-
-7. **Present summary to user**: Key findings from each agent, cross-review highlights, SA system concerns, DevOps infra concerns, database-architect findings (if active: schema map, migration state, query pattern risks, index gaps), TL code-level concerns. If SA or TL recommends re-scope, present prominently.
-
-8. **User checkpoint**.
+6. **User checkpoint**.
 
 ---
 
 ## Phase 3: Planning
 
-**Goal**: All agents create plans. SA defines API contracts and renders a system-level verdict. TL validates the code-level approach and renders a code-level verdict. Both can block implementation independently.
+**Inputs Manifest**
+- SE / QA / DB / DevOps: `01-spec.md`, all spec reviews active, all discovery docs available
+- SA: same as above
+- TL (sequential, after cross-reviews): all of the above + all plans + all cross-review notes
 
-### Steps:
+### Steps
 
-1. **Launch agents in parallel** (model: `{MODEL_STANDARD}` for SE/QA/DevOps/DBA, `{MODEL_THOROUGH}` for SA; 3–5 agents depending on conditional activations):
+1. Launch in parallel (`{MODEL_STANDARD}` for SE/QA/DevOps/DBA, `{MODEL_THOROUGH}` for SA, 3–5 agents):
 
-   a. **`software-engineer` in PLANNING mode**:
-   - Prompt: "You are in PLANNING mode. Read all documents: specification at `{SPEC_FOLDER}/01-spec.md`, all spec reviews (UI, architecture, database, infra — whichever exist), all discovery documents (SE, QA, SA, TL, UI/UX, DevOps, DB — whichever exist). Create a detailed implementation plan. Pay special attention to: (1) the SA's architecture review and API contracts — your implementation must conform to them, (2) the TL's recommendations, (3) the SA's recommended PR phasing. In major workflows, infra code (Dockerfiles, CI configs, IaC) is implemented by the DevOps Engineer, not you. Include a PR Strategy section specifying sub-PRs and their ordering. Write your plan to `{SPEC_FOLDER}/03-plan-se.md`."
+   a. `software-engineer` PLANNING. Conform to SA's API contracts. Address TL recommendations. Include PR Strategy. Note: infra code is DevOps's; entity/migration code is DB Architect's. → `03-plan-se.md`
+   b. `qa-engineer` PLANNING. Map all AC + cross-service integration tests per SA's requirements. → `03-plan-qa.md`
+   c. `software-architect` PLANNING. Define API contracts, interaction patterns, migration strategy, ADRs. Will review SE plan after it's available. → `03-plan-sa.md`
+   d. `devops-engineer` PLANNING (if active). → `03-plan-devops.md`
+   e. `database-architect` PLANNING (if active). → `03-plan-db.md`
 
-   b. **`qa-engineer` in PLANNING mode**:
-   - Prompt: "You are in PLANNING mode. Read all documents: specification, all spec reviews, all discovery documents. Create a detailed test plan mapping every acceptance criterion to specific test cases. For major workflows, include cross-service integration test cases based on the SA's integration test requirements. Write your plan to `{SPEC_FOLDER}/03-plan-qa.md`."
+2. Cross-review round in parallel (`{MODEL_FAST}`, 3–6):
 
-   c. **`software-architect` in PLANNING mode**:
-   - Prompt: "You are in PLANNING mode. Read all documents: specification, all spec reviews, all discovery documents. Define API contract specifications (schemas, error codes, versioning), service interaction design, data migration strategy (if needed), backward compatibility plan, and integration test requirements. Finalize Architecture Decision Records (ADRs). Write your plan to `{SPEC_FOLDER}/03-plan-sa.md`. After the SE's plan is available, you will review it for system-level compliance and render your verdict."
+   a. SE reads QA plan; appends `## Cross-Review Notes` to `03-plan-se.md`.
+   b. QA reads SE plan; appends to `03-plan-qa.md`.
+   c. (UI active) UI reviews SE plan against `01-spec-ui-review.md` → `03-plan-ui-review.md`.
+   d. SA reviews SE plan for system compliance; appends `## SE Plan Review Notes` + `## Verdict` to `03-plan-sa.md`.
+   e. (DevOps active) DevOps reviews SE plan; appends `## SE Plan Review Notes` to `03-plan-devops.md`.
+   f. (DB active) DB Architect reviews SE plan; appends `## SE Plan Review Notes` + `## Cross-Review Notes` to `03-plan-db.md`.
 
-   d. **`devops-engineer` in PLANNING mode** (only if activated):
-   - Prompt: "You are in PLANNING mode. Read all documents: specification, all spec reviews, all discovery documents. Plan infrastructure changes: file-by-file changes, deployment strategy, environment configuration, CI/CD modifications, monitoring plan, rollback strategy. Specify which infra changes go in which PRs and dependencies on the SE's PRs. Write your plan to `{SPEC_FOLDER}/03-plan-devops.md`. After the SE's plan is available, you will review it for deployment feasibility."
+3. Launch `tech-lead` PLANNING REVIEW sequentially (`{MODEL_STANDARD}`) → `03-plan-tl.md`. Code-level verdict.
 
-   e. **`database-architect` in PLANNING mode** (only if activated):
-   - Prompt: "You are in PLANNING mode. Read all documents: specification at `{SPEC_FOLDER}/01-spec.md`, all spec reviews (UI, architecture, database, infra — whichever exist), all discovery documents (SE, QA, SA, TL, UI/UX, DevOps, DB — whichever exist). Create a detailed database layer plan: schema changes, migration files (naming, up/down scripts, ordering), index additions/removals, ORM configuration changes. Specify which DB changes go in which PRs and dependencies on the SE's PRs. Write your plan to `{SPEC_FOLDER}/03-plan-db.md`. After the SE's plan is available, you will review it for DB layer compliance."
+4. Read SA verdict (`03-plan-sa.md` §Verdict) and TL verdict (`03-plan-tl.md` §Verdict).
 
-2. **Wait for all agents to complete.**
+5. Handle dual verdicts (most restrictive wins):
+   - **Both APPROVED**: proceed.
+   - **SA APPROVED WITH CHANGES**: SE revises (system-level); SA re-reviews.
+   - **TL APPROVED WITH CHANGES**: SE revises (code-level); TL re-reviews.
+   - **Either REJECTED**: ask user — revise | override (warn) | stop.
+   - **Both have issues**: address most restrictive first; both must be satisfied.
 
-3. **Cross-review round** — Launch agents in parallel (model: `{MODEL_FAST}`, 3–6):
+6. Present all plans (SE, QA, SA, TL, DevOps if active, UI if active, DB if active).
 
-   a. **`software-engineer` cross-review**:
-   - Prompt: "You are completing a cross-review. Read the QA Engineer's test plan at `{SPEC_FOLDER}/03-plan-qa.md`. Then read your own plan at `{SPEC_FOLDER}/03-plan-se.md`. Append a '## Cross-Review Notes' section with comments on whether your implementation supports QA's test cases, interface contracts, and any adjustments."
-
-   b. **`qa-engineer` cross-review**:
-   - Prompt: "You are completing a cross-review. Read the SE's plan at `{SPEC_FOLDER}/03-plan-se.md`. Then read your own plan at `{SPEC_FOLDER}/03-plan-qa.md`. Append a '## Cross-Review Notes' section with comments on testability, implementation dependencies, and any adjustments."
-
-   c. **`ui-ux-specialist` plan review** (only if activated):
-   - Prompt: "You are reviewing the SE's plan for UI compliance. Read the SE's plan at `{SPEC_FOLDER}/03-plan-se.md` and your spec review at `{SPEC_FOLDER}/01-spec-ui-review.md`. Assess whether the plan adequately addresses your UI acceptance criteria, accessibility requirements, and design system recommendations. Write your review to `{SPEC_FOLDER}/03-plan-ui-review.md`."
-
-   d. **`software-architect` plan review** (reviews SE's plan for system compliance):
-   - Prompt: "You are reviewing the SE's plan for system-level compliance. Read the SE's plan at `{SPEC_FOLDER}/03-plan-se.md` and your own plan at `{SPEC_FOLDER}/03-plan-sa.md`{if database-architect active: ' and the database plan at `{SPEC_FOLDER}/03-plan-db.md`'}. Assess: does the SE's approach honor your API contracts, service boundaries, and integration patterns?{if database-architect active: ' Also assess whether the SE's and DB agent's approaches honor service data boundaries.'} Append '## SE Plan Review Notes' to your plan at `{SPEC_FOLDER}/03-plan-sa.md`. Then render your system-level verdict by appending the '## Verdict' section."
-
-   e. **`devops-engineer` plan review** (only if activated):
-   - Prompt: "You are reviewing the SE's plan for deployment feasibility. Read the SE's plan at `{SPEC_FOLDER}/03-plan-se.md` and your own plan at `{SPEC_FOLDER}/03-plan-devops.md`. Assess: can the SE's changes be deployed with the planned strategy? Any infrastructure dependencies not yet planned? Append '## SE Plan Review Notes' to your plan at `{SPEC_FOLDER}/03-plan-devops.md`."
-
-   f. **`database-architect` plan review** (only if activated):
-   - Prompt: "You are reviewing the SE's plan for DB layer compliance. Read the SE's plan at `{SPEC_FOLDER}/03-plan-se.md` and your own plan at `{SPEC_FOLDER}/03-plan-db.md`. Assess: does the SE's approach use the entities, queries, and transactions correctly? Are there data access patterns that conflict with your migration plan? Append '## SE Plan Review Notes' to your plan at `{SPEC_FOLDER}/03-plan-db.md`. Then append your '## Cross-Review Notes' section."
-
-4. **Wait for cross-reviews to complete.**
-
-5. **Launch `tech-lead` in PLANNING REVIEW mode** (sequential — after cross-reviews):
-   - Prompt: "You are in PLANNING REVIEW mode. Read all documents: specification, all spec reviews, all discovery documents, the SE plan at `{SPEC_FOLDER}/03-plan-se.md` (with cross-review notes), the QA plan at `{SPEC_FOLDER}/03-plan-qa.md` (with cross-review notes), the SA plan at `{SPEC_FOLDER}/03-plan-sa.md` (with SE review notes and verdict){if UI/UX active: ', the UI/UX plan review at `{SPEC_FOLDER}/03-plan-ui-review.md`'}{if DevOps active: ', the DevOps plan at `{SPEC_FOLDER}/03-plan-devops.md` (with SE review notes)'}{if database-architect active: ', the database plan at `{SPEC_FOLDER}/03-plan-db.md` (with SE review notes)'}. Evaluate the SE's approach from a code-level architecture perspective. Note: the SA handles system-level concerns; your focus is code-level quality. Reference the SA's API contracts when evaluating the SE's approach. Write your review to `{SPEC_FOLDER}/03-plan-tl.md`."
-
-6. **Read the SA's verdict** (in `03-plan-sa.md`) and **TL's verdict** (in `03-plan-tl.md`).
-
-7. **Handle dual verdicts** — use the most restrictive:
-
-   a. **Both APPROVED**: Proceed to step 8.
-
-   b. **SA: APPROVED WITH CHANGES** (system-level changes required):
-      - Present SA's required changes to user.
-      - If user agrees: re-launch SE to revise plan addressing system-level issues. Re-run SA review.
-      - If user overrides: note override, proceed.
-
-   c. **TL: APPROVED WITH CHANGES** (code-level changes required):
-      - Present TL's required changes to user.
-      - If user agrees: re-launch SE to revise plan addressing code-level issues. Re-run TL review.
-      - If user overrides: note override, proceed.
-
-   d. **Either REJECTED**:
-      - Present rejection reasons and recommended path forward.
-      - Ask user: "(1) SE revises the plan, (2) Override and proceed anyway, (3) Stop here."
-      - If revise: re-launch SE with feedback from the rejecting agent. Re-run that agent's review.
-      - If override: warn, note, proceed.
-      - If stop: halt.
-
-   e. **Both have issues**: Address the most restrictive first (REJECTED > WITH CHANGES > APPROVED). Both must be satisfied before proceeding.
-
-8. **Present all plans to user**:
-   - SE plan: approach, PRs, files per PR, implementation order
-   - QA plan: test strategy, test cases, integration tests
-   - SA plan: API contracts, ADRs, system verdict
-   - TL review: code-level verdict
-   - DevOps plan (if active): infra changes, deployment strategy, rollback plan
-   - UI/UX review (if active): UI criteria coverage
-   - Database architect plan (if active): schema changes, migration strategy, index plan, SE plan review
-
-9. **User checkpoint**: Approve all plans before implementation.
+7. **User checkpoint** — **CRITICAL**: do NOT start without explicit approval.
 
 ---
 
 ## Phase 4: Implementation
 
-**Goal**: SE implements application code, DevOps implements infrastructure code, QA implements tests. Sub-PRs are grouped into phases with ordering dependencies.
+**Inputs Manifest** (per sub-PR)
+- SE: `01-spec.md`, `03-plan-se.md`, `03-plan-sa.md` (API contracts), scaffold/RED summary as appropriate
+- DevOps: `01-spec.md`, `03-plan-devops.md`, scope description
+- DB Architect: `01-spec.md`, `03-plan-db.md`, `01-spec-db-review.md`, `03-plan-sa.md`, `04-implementation-summary.md`
+- QA: `03-plan-qa.md`, `01-spec.md`, all impl summaries that exist
 
-### Steps:
+### Steps
 
-1. **Confirm user approval**.
+1. Confirm user approval.
 
-2. **Determine sub-PR structure and phasing**:
-   - Read the SE's plan PR Strategy section and the SA's recommended PR phasing.
-   - Map sub-PRs into phases (from SA's plan): Phase A (foundation), Phase B (services), Phase C (integration), Phase D (infrastructure).
-   - Determine which PRs can be parallel within a phase vs. must be sequential.
+2. Determine sub-PR structure and phasing from `03-plan-se.md` PR Strategy + `03-plan-sa.md` PR phasing. Map to phases A (Foundation) → B (Services) → C (Integration) → D (Infra). Determine within-phase parallelism.
 
-3. **For each phase** (iterate sequentially — Phase A → B → C → D):
+3. **For each phase A→D, for each sub-PR within the phase**:
 
-   **For each sub-PR within the phase** (sequential or parallel per SA's guidance):
+   a. Create sub-branch `{BRANCH_NAME}/pr-{N}-{description}` from `{BRANCH_NAME}`.
 
-   a. **Create the sub-branch**: `{BRANCH_NAME}/pr-{N}-{description}` from the epic branch.
+   b. Determine implementer:
+      - **App PR**: SE
+      - **Infra PR** (if DevOps active): DevOps
+      - **Mixed PR**: SE first, then DevOps (same branch)
+      - **DB-layer PR** (if DB active): DB Architect
+      - **Mixed with DB**: SE first, then DB Architect (same branch)
 
-   b. **Determine implementer**:
-      - **Application PRs**: Launch `software-engineer` in IMPLEMENTATION mode.
-      - **Infrastructure PRs**: Launch `devops-engineer` in IMPLEMENTATION mode (if active).
-      - **Mixed PRs**: Launch SE first (application code), then DevOps (infra code), same branch.
-      - **DB-layer PRs**: Launch `database-architect` in IMPLEMENTATION mode (if active).
-      - **Mixed PRs with DB**: Launch SE first (application code), then database-architect (DB layer code), same branch.
+   c. Launch SE IMPLEMENTATION (for app PRs) (`{MODEL_STANDARD}`):
+      - Prompt: "IMPLEMENTATION mode. PR {N}/{total}, Phase {phase}, scope: {PR scope}. Conform to SA's API contracts. Infra/DB layer code is NOT yours. Append PR section to `04-implementation-summary.md`."
 
-   c. **Launch SE in IMPLEMENTATION mode** (for application PRs):
-      - Prompt: "You are in IMPLEMENTATION mode. Read your plan at `{SPEC_FOLDER}/03-plan-se.md`, the specification at `{SPEC_FOLDER}/01-spec.md`, and the SA's API contracts in `{SPEC_FOLDER}/03-plan-sa.md`. This is PR {N} of {total} (Phase {phase}). Implement ONLY the scope for this PR: {PR scope}. Your implementation MUST conform to the SA's API contract specifications. Infra code (Dockerfiles, CI configs, IaC) is NOT your responsibility. Write your implementation summary to `{SPEC_FOLDER}/04-implementation-summary.md` (append a section for PR {N})."
+   d. Launch DevOps IMPLEMENTATION (for infra PRs, if active) (`{MODEL_STANDARD}`):
+      - Prompt: "IMPLEMENTATION mode. PR {N}/{total}, Phase {phase}, scope: {PR scope}. Append PR section to `04-infra-summary.md`."
 
-   d. **Launch DevOps in IMPLEMENTATION mode** (for infra PRs, only if activated):
-      - Prompt: "You are in IMPLEMENTATION mode. Read your plan at `{SPEC_FOLDER}/03-plan-devops.md` and the specification at `{SPEC_FOLDER}/01-spec.md`. This is PR {N} of {total} (Phase {phase}). Implement ONLY the infrastructure scope for this PR: {PR scope}. Write your infrastructure summary to `{SPEC_FOLDER}/04-infra-summary.md` (append a section for PR {N})."
+   e. Launch DB Architect IMPLEMENTATION (for DB-layer PRs, if active) (`{MODEL_STANDARD}`):
+      - Prompt: "IMPLEMENTATION mode. PR {N}/{total}, Phase {phase}, scope: {PR scope}. Append PR section to `04-db-summary.md`."
 
-   d-ii. **Launch `database-architect` in IMPLEMENTATION mode** (for DB-layer PRs or mixed PRs with DB layer, only if activated):
-      - Prompt: "You are in IMPLEMENTATION mode. Read your plan at `{SPEC_FOLDER}/03-plan-db.md`, the specification at `{SPEC_FOLDER}/01-spec.md`, the database spec review at `{SPEC_FOLDER}/01-spec-db-review.md`, the SA's API contracts in `{SPEC_FOLDER}/03-plan-sa.md`, and the SE's implementation summary at `{SPEC_FOLDER}/04-implementation-summary.md`. This is PR {N} of {total} (Phase {phase}). Implement ONLY the database layer scope for this PR: {DB PR scope}. Write your DB implementation summary to `{SPEC_FOLDER}/04-db-summary.md` (append a section for PR {N})."
+   f. Launch QA IMPLEMENTATION (after SE/DevOps/DB complete or in parallel if safe) (`{MODEL_STANDARD}`):
+      - Prompt: "IMPLEMENTATION mode. PR {N}/{total}, scope: {PR scope}. Reference SA's integration test requirements for cross-service cases. Run suite. Append PR section to `04-test-report.md`."
 
-   e. **Launch QA in IMPLEMENTATION mode** (after SE/DevOps/DB complete, or parallel if safe):
-      - Prompt: "You are in IMPLEMENTATION mode. Read your test plan at `{SPEC_FOLDER}/03-plan-qa.md`, the specification at `{SPEC_FOLDER}/01-spec.md`, and the implementation summaries at `{SPEC_FOLDER}/04-implementation-summary.md`{if DevOps active: ' and `{SPEC_FOLDER}/04-infra-summary.md`'}{if database-architect active: ' and `{SPEC_FOLDER}/04-db-summary.md`'}. This is PR {N} of {total}. Implement ONLY the tests for this PR scope: {PR scope}. For cross-service integration test cases, reference the SA's integration test requirements. Run the test suite after writing tests. Write your test report to `{SPEC_FOLDER}/04-test-report.md` (append a section for PR {N})."
+   g. Commit. Message: `feat: {PR description} (specs/{id}-{slug}, PR {N}/{total})`.
 
-   f. **Commit changes** to the sub-branch.
+   h. Intermediate checkpoint (if not last sub-PR).
 
-   g. **Intermediate checkpoint** (if not last sub-PR): Present results, ask user to proceed.
+4. After all sub-PRs:
+   - Ensure `04-implementation-summary.md`, `04-test-report.md`, and `04-infra-summary.md` (if DevOps active) and `04-db-summary.md` (if DB active) are consolidated.
 
-4. **After all sub-PRs are implemented**:
-   - Ensure `04-implementation-summary.md` has consolidated sections for all PRs.
-   - Ensure `04-test-report.md` has consolidated results for all PRs.
-   - If DevOps active: ensure `04-infra-summary.md` has consolidated infra sections.
+5. Cross-review round in parallel (`{MODEL_FAST}`, 2 or 4):
 
-5. **Cross-review round** — Launch agents in parallel (2 or 4):
+   a. SE reads `04-test-report.md`; appends to `04-implementation-summary.md`.
+   b. QA reads `04-implementation-summary.md`; appends to `04-test-report.md`.
+   c. (DevOps active) SA reads infra summary; appends architecture-alignment notes to `04-implementation-summary.md`.
+   d. (DevOps active) DevOps reads `04-implementation-summary.md`; appends deployment notes to `04-infra-summary.md`.
 
-   a. **`software-engineer` in IMPLEMENTATION mode (cross-review)**:
-   - Prompt: "You are completing a cross-review. Read the QA Engineer's test report at `{SPEC_FOLDER}/04-test-report.md`. Then read your own implementation summary at `{SPEC_FOLDER}/04-implementation-summary.md`. Append a '## Cross-Review Notes' section to your document at `{SPEC_FOLDER}/04-implementation-summary.md` with your observations about whether the tests align with what was implemented, any interface assumptions in the tests that differ from reality, and any concerns."
-
-   b. **`qa-engineer` in IMPLEMENTATION mode (cross-review)**:
-   - Prompt: "You are completing a cross-review. Read the Software Engineer's implementation summary at `{SPEC_FOLDER}/04-implementation-summary.md`. Then read your own test report at `{SPEC_FOLDER}/04-test-report.md`. Append a '## Cross-Review Notes' section to your document at `{SPEC_FOLDER}/04-test-report.md` with your observations about whether the implementation matches what the tests assume, any deviations from plan that affect test correctness, and any concerns."
-
-   c. **`software-architect` in IMPLEMENTATION mode (cross-review)** (only if activated):
-   - Prompt: "You are completing a cross-review. Read the DevOps Engineer's infrastructure summary at `{SPEC_FOLDER}/04-infra-summary.md`. Then read your own implementation summary at `{SPEC_FOLDER}/04-implementation-summary.md`. Append a '## Cross-Review Notes' section to your document at `{SPEC_FOLDER}/04-implementation-summary.md` with your observations about whether the infrastructure implementation aligns with the architecture decisions, any concerns about infra changes that affect application behaviour, and any concerns."
-
-   d. **`devops-engineer` in IMPLEMENTATION mode (cross-review)** (only if activated):
-   - Prompt: "You are completing a cross-review. Read the Software Engineer's implementation summary at `{SPEC_FOLDER}/04-implementation-summary.md`. Then read your own infrastructure summary at `{SPEC_FOLDER}/04-infra-summary.md`. Append a '## Cross-Review Notes' section to your document at `{SPEC_FOLDER}/04-infra-summary.md` with your observations about whether the application implementation has any infrastructure implications, any deployment concerns raised by the SE's changes, and any concerns."
-
-6. **Present results**: Per-phase summary, per-PR summary, consolidated totals.
+6. Present per-phase summary, per-PR summary, consolidated totals.
 
 7. **User checkpoint**.
 
@@ -343,216 +224,134 @@ This workflow handles large features, new systems, cross-service changes, and in
 
 ## Phase 5: Quality Gates
 
-**Goal**: Final validation by all agents. QA validates acceptance criteria, SE reviews tests, TL reviews code architecture, SA validates system integration, UI/UX validates design, DevOps validates deployment readiness.
+**Inputs Manifest** (each reviewer reads what their domain requires)
 
-### Steps:
+### Steps
 
-1. **Launch `qa-engineer` and `software-engineer` in QUALITY GATE mode in parallel** (model: `{MODEL_STANDARD}`):
+1. Launch in parallel (`{MODEL_STANDARD}`):
 
-   a. **`qa-engineer` in QUALITY GATE mode** (writes base report):
-   - Prompt: "You are in QUALITY GATE mode. This is the final validation. Read the specification at `{SPEC_FOLDER}/01-spec.md`{if UI/UX active: ', the UI spec review at `{SPEC_FOLDER}/01-spec-ui-review.md`'}, the architecture spec review at `{SPEC_FOLDER}/01-spec-arch-review.md`, the implementation summary at `{SPEC_FOLDER}/04-implementation-summary.md`{if DevOps active: ', the infra summary at `{SPEC_FOLDER}/04-infra-summary.md`'}, the TDD-RED report at `{SPEC_FOLDER}/04-tdd-red-report.md` (if it exists), and the test report at `{SPEC_FOLDER}/04-test-report.md`. Review the actual code changes. Run the full test suite. Validate every acceptance criterion. For cross-service integration scenarios, reference the SA's integration test requirements. Write the quality gate report to `{SPEC_FOLDER}/05-quality-gate.md`."
+   a. `qa-engineer` QUALITY GATE (writes base): `01-spec.md`, all spec reviews active, `04-implementation-summary.md`, `04-tdd-red-report.md` (if exists), `04-test-report.md`, `04-infra-summary.md` if DevOps active. Reference SA integration requirements for cross-service. Write `05-quality-gate.md`.
+   b. `software-engineer` QUALITY GATE (test review): `04-tdd-red-report.md` (if exists), `04-test-report.md`, test files. Write `05-quality-gate-se.md`.
 
-   b. **`software-engineer` in QUALITY GATE mode** (test review, runs in parallel with QA):
-   - Prompt: "You are in QUALITY GATE mode (test review). Read the TDD-RED report at `{SPEC_FOLDER}/04-tdd-red-report.md` (if it exists) and the test report at `{SPEC_FOLDER}/04-test-report.md`. Review the actual test code. Assess test correctness, TDD cycle completeness, coverage adequacy, and test quality. Write your review to `{SPEC_FOLDER}/05-quality-gate-se.md`."
+2. After both complete, launch remaining reviewers in parallel (`{MODEL_STANDARD}` for TL/UI/DevOps, `{MODEL_THOROUGH}` for SA, 2–4 agents):
 
-2. **After both complete, launch remaining reviewers in parallel** (model: `{MODEL_STANDARD}` for TL/UI/DevOps, `{MODEL_THOROUGH}` for SA; 2–4 agents):
+   a. `tech-lead` QUALITY GATE (architecture, code-level): `04-implementation-summary.md`, `03-plan-se.md`, `03-plan-tl.md`, `03-plan-sa.md`, modified files. Append `## Tech Lead — Architecture Review` to `05-quality-gate.md`.
+   b. `software-architect` QUALITY GATE (system integration): `03-plan-sa.md`, `04-implementation-summary.md`, `04-infra-summary.md` if DevOps active, `04-test-report.md`, integration code. Append `## Software Architect — System Integration Review` to `05-quality-gate.md`.
+   c. `ui-ux-specialist` QUALITY GATE (if UI active): `01-spec-ui-review.md`, `04-implementation-summary.md`, UI code. Append `## UI/UX Specialist — Design Review` to `05-quality-gate.md`.
+   d. `devops-engineer` QUALITY GATE (if active): `03-plan-devops.md`, `04-infra-summary.md`, `04-implementation-summary.md`, infra code. Append `## DevOps Engineer — Deployment Readiness Review` to `05-quality-gate.md`.
 
-   a. **`tech-lead` in QUALITY GATE mode** (architecture review):
-   - Prompt: "You are in QUALITY GATE mode (test review). Read the test report at `{SPEC_FOLDER}/04-test-report.md` and review the actual test code. Assess test correctness, coverage adequacy, and test quality. Append your '## Software Engineer - Test Quality Review' section to `{SPEC_FOLDER}/05-quality-gate.md`."
+3. After all reviewers complete, append SE test review section to `05-quality-gate.md` (copy from `05-quality-gate-se.md`), then append `## QA Engineer — Final Reflection` (`{MODEL_FAST}`).
 
-   b. **`tech-lead` in QUALITY GATE mode** (architecture review):
-   - Prompt: "You are in QUALITY GATE mode (architecture review). Read the implementation summary at `{SPEC_FOLDER}/04-implementation-summary.md`, the SE's plan at `{SPEC_FOLDER}/03-plan-se.md`, your plan review at `{SPEC_FOLDER}/03-plan-tl.md`, and the SA's plan at `{SPEC_FOLDER}/03-plan-sa.md`. Review the actual code changes. Assess plan adherence, code-level architectural quality, and convention compliance. Note: the SA handles system-level integration; your focus is code-level quality within each service. Append your '## Tech Lead - Architecture Review' section to `{SPEC_FOLDER}/05-quality-gate.md`."
+4. Read full quality gate report.
 
-   c. **`software-architect` in QUALITY GATE mode** (system integration review):
-   - Prompt: "You are in QUALITY GATE mode (system integration review). Read your plan at `{SPEC_FOLDER}/03-plan-sa.md`, the implementation summary at `{SPEC_FOLDER}/04-implementation-summary.md`{if DevOps active: ', the infra summary at `{SPEC_FOLDER}/04-infra-summary.md`'}, and the test report at `{SPEC_FOLDER}/04-test-report.md`. Review the actual code changes — especially API endpoints, event handlers, service clients, and integration code. Validate API contract compliance, cross-service data flow, backward compatibility, and ADR accuracy. Append your '## Software Architect - System Integration Review' section to `{SPEC_FOLDER}/05-quality-gate.md`."
+5. Present consolidated verdict (most restrictive across reviewers).
 
-   d. **`ui-ux-specialist` in QUALITY GATE mode** (only if activated):
-   - Prompt: "You are in QUALITY GATE mode (design review). Read your spec review at `{SPEC_FOLDER}/01-spec-ui-review.md`, the implementation summary at `{SPEC_FOLDER}/04-implementation-summary.md`, and the test report at `{SPEC_FOLDER}/04-test-report.md`. Review the actual UI code changes. Validate design system compliance, accessibility, and responsive behavior. Append your '## UI/UX Specialist - Design Review' section to `{SPEC_FOLDER}/05-quality-gate.md`."
-
-   e. **`devops-engineer` in QUALITY GATE mode** (only if activated):
-   - Prompt: "You are in QUALITY GATE mode (deployment readiness review). Read your plan at `{SPEC_FOLDER}/03-plan-devops.md`, the infra summary at `{SPEC_FOLDER}/04-infra-summary.md`, and the implementation summary at `{SPEC_FOLDER}/04-implementation-summary.md`. Review the actual infrastructure code changes. Validate CI/CD pipeline, infrastructure correctness, deployment strategy, environment configuration, monitoring, and rollback plan. Append your '## DevOps Engineer - Deployment Readiness Review' section to `{SPEC_FOLDER}/05-quality-gate.md`."
-
-3. **After all reviewers complete, consolidate** (model: `{MODEL_FAST}`): Launch `qa-engineer` in QUALITY GATE mode (final reflection):
-   - Prompt: "You are completing a final reflection. Read the quality gate report at `{SPEC_FOLDER}/05-quality-gate.md` and the SE's test review at `{SPEC_FOLDER}/05-quality-gate-se.md`. Append a '## Software Engineer - Test Quality Review' section to `{SPEC_FOLDER}/05-quality-gate.md` (copy from SE's file), then append a '## QA Engineer - Final Reflection' acknowledging all reviewers' findings and confirming your overall verdict."
-
-4. **Read the full quality gate report.**
-
-5. **Present results to user**:
-   - QA verdict + acceptance criteria results
-   - SE test quality assessment
-   - TL code architecture verdict
-   - SA system integration verdict
-   - UI/UX design verdict (if active)
-   - DevOps deployment readiness verdict (if active)
-   - **Overall recommendation**: consolidated from all verdicts.
-
-6. **Handle the verdict** (most restrictive across all reviewers):
-
-   a. **All APPROVED/ADEQUATE**: Proceed to Phase 6.
-
-   b. **Any APPROVED WITH CONDITIONS or NEEDS IMPROVEMENT (non-blocking)**:
-      - Present all conditions. Ask user:
-        - Address now (loop to Phase 4 with specific fixes)
-        - Accept and proceed to merge (create follow-up tasks)
-        - Stop
-
-   c. **QA REJECTED or any NEEDS IMPROVEMENT (blocking)**:
-      - Present required fixes. Ask user:
-        - Fix (loop to Phase 4)
-        - Stop
-        - Override (warn about bypassing quality gates)
+6. Handle verdict:
+   - **All APPROVED/ADEQUATE**: → Phase 6.
+   - **WITH CONDITIONS / non-blocking NEEDS IMPROVEMENT**: present; ask user — address now | accept and merge | stop.
+   - **REJECTED / blocking NEEDS IMPROVEMENT**: present; ask user — fix (loop to Phase 4) | stop | override (warn).
 
 ---
 
 ## Phase 6: Merge
 
-**Goal**: Create sub-PRs targeting the epic branch, then a final PR from epic branch to main.
+### Steps
 
-### Steps:
+1. **Assemble PR summary** (deterministic — extract, do not paraphrase, no agent invocation):
 
-1. **Generate the PR summary**: Create `{SPEC_FOLDER}/06-pr-summary.md`:
+   Create `{SPEC_FOLDER}/06-pr-summary.md`:
 
    ```markdown
-   # PR Summary
-
-   ## Title
-   [Short descriptive title from the spec]
+   # [spec title]
 
    ## Summary
-   [2-3 sentences from the spec summary]
+   [Copy spec §Summary verbatim]
 
-   ## Changes Made
-   [From 04-implementation-summary.md — consolidated across all sub-PRs]
+   ## Changes
+   [Copy 04-implementation-summary.md §Changes — consolidated across sub-PRs]
 
    ## Infrastructure Changes
-   [From 04-infra-summary.md — if DevOps was active, otherwise "N/A"]
+   [Copy 04-infra-summary.md §Changes if DevOps active, else "N/A"]
 
    ## Tests
-   [From 04-test-report.md — summary of tests written and results]
+   [Copy 04-test-report.md §Run + §AC Coverage]
 
    ## Quality Gate
-   [From 05-quality-gate.md — all verdicts]
-   - QA Verdict: [verdict]
-   - SE Test Review: [verdict]
-   - TL Architecture Review: [verdict]
-   - SA System Integration Review: [verdict]
-   - UI/UX Design Review: [verdict or "N/A"]
-   - DevOps Deployment Readiness: [verdict or "N/A"]
+   - **QA Verdict:** [from §Verdict]
+   - **SE Test Review:** [verdict line]
+   - **TL Architecture:** [verdict line]
+   - **SA System Integration:** [verdict line]
+   - **UI/UX Design:** [verdict line | N/A]
+   - **DevOps Deployment Readiness:** [verdict line | N/A]
 
-   ## Architecture Decision Records
-   [List of ADRs from 03-plan-sa.md]
+   ## ADRs
+   [List ADR titles from 03-plan-sa.md §ADRs]
 
-   ## Acceptance Criteria Status
-   [PASS/FAIL per criterion]
+   ## AC Status
+   [Copy 05-quality-gate.md §AC Validation table]
 
    ## Deployment Plan
-   [From 03-plan-devops.md — deployment strategy and rollback plan, or "Standard deployment"]
+   [Copy 03-plan-devops.md §Deployment Strategy summary if active, else "Standard deployment"]
 
-   ## Branch Info
-   - **Epic branch**: `{BRANCH_NAME}`
-   - **Target branch**: `{BASE_BRANCH}`
-   - **Sub-PRs**: [list with phase grouping]
+   ## Branch
+   `{BRANCH_NAME}` (epic) → `{BASE_BRANCH}`
+   **Sub-PRs:** [list with phase grouping]
 
    ## Spec Folder
    `{SPEC_FOLDER}`
    ```
 
+   Target: ≤180 lines. No re-narration; no new commentary.
+
 2. **Handle sub-PR branches** (phased):
-   - For each sub-branch `{BRANCH_NAME}/pr-N-{description}`:
-     - Push the sub-branch to remote with `-u` flag.
-     - Create a PR targeting the epic branch `{BRANCH_NAME}`:
-       - `gh pr create --base {BRANCH_NAME} --title "{PR title}" --body "{PR description}"`
-     - **GitHub merge checkpoint** — present the PR and wait in a loop until it is merged:
-
-       ```
-       ⏸ GitHub Merge Required
-       Sub-PR #{N} has been created: {PR URL}
-       Please go to GitHub, review this PR, and merge it into `{BRANCH_NAME}`.
-
-       Once done, reply with one of:
-       - "merged" / "done" → to continue to the next sub-PR
-       - "changes requested" → I'll read the review comments and address them
-       ```
-
-       **If the user replies "changes requested"** — repeat the following until the user confirms the merge:
-
-       a. Launch `software-engineer` in **PR REVIEW RESPONSE mode**:
-          - Prompt: "You are in PR REVIEW RESPONSE mode. Fetch all review comments for sub-PR #{N} using `gh pr view {PR_NUMBER} --comments` and `gh pr diff {PR_NUMBER}`. For each comment: (1) If you agree, make the code change and explain what you did. (2) If you need clarification, formulate a specific question for the user. (3) If you disagree, prepare a concise, professional pushback explaining your reasoning. Commit and push any code changes to the same branch. Write a response summary to `{SPEC_FOLDER}/06-pr-review-response-{N}.md` (append if it already exists) listing each comment and how it was handled."
-
-       b. Read `{SPEC_FOLDER}/06-pr-review-response-{N}.md`. Present each comment and its resolution.
-
-       c. If any comments required user clarification: ask the user, then re-launch SE with the answers and repeat from (a).
-
-       d. Once all comments are addressed, loop back to the checkpoint:
-          ```
-          ⏸ GitHub Merge Required (updated)
-          Changes have been pushed. Please re-review sub-PR #{N} on GitHub.
-
-          Reply with:
-          - "merged" / "done" → to continue to the next sub-PR
-          - "changes requested" → I'll address the new round of comments
-          ```
-
-       **This loop repeats until the user replies "merged" / "done".** Only then proceed to the next sub-PR.
-   - Group PR links by phase for clarity.
-
-3. **Handle the epic branch** (final PR):
-   - Ask user how to proceed:
-     - **Option A**: Create the final PR now (epic branch → BASE_BRANCH).
-     - **Option B**: Wait for sub-PRs to be reviewed/merged first.
-   - Use `gh pr create --base {BASE_BRANCH} --title "{spec title}" --body "$(cat {SPEC_FOLDER}/06-pr-summary.md)"`
-   - **GitHub merge checkpoint** for the final PR — same loop as above:
+   For each `{BRANCH_NAME}/pr-N-{description}`:
+   - Push: `git push -u origin {sub-branch}`.
+   - Create PR: `gh pr create --base {BRANCH_NAME} --title "{PR title}" --body "{PR description}"`.
+   - **GitHub merge checkpoint** — wait for user:
 
      ```
      ⏸ GitHub Merge Required
-     Final PR has been created: {PR URL}
-     Please go to GitHub, review this PR, and merge it into `{BASE_BRANCH}`.
-
-     Once done, reply with one of:
-     - "merged" / "done" → to complete the workflow
-     - "changes requested" → I'll read the review comments and address them
+     Sub-PR #{N} created: {PR URL}
+     Reply: "merged" / "done" → next · "changes requested" → handle review
      ```
 
-     **If the user replies "changes requested"** — follow the same review loop:
+     **If "changes requested"**: loop until merge.
+     a. Launch `software-engineer` PR REVIEW RESPONSE mode. Append to `06-pr-review-response-{N}.md`.
+     b. Read, present, address comments.
+     c. Return to checkpoint.
 
-     a. Launch `software-engineer` in **PR REVIEW RESPONSE mode**:
-        - Prompt: "You are in PR REVIEW RESPONSE mode. Fetch all review comments for the final PR using `gh pr view {PR_NUMBER} --comments` and `gh pr diff {PR_NUMBER}`. For each comment: (1) If you agree, make the code change and explain what you did. (2) If you need clarification, formulate a specific question for the user. (3) If you disagree, prepare a concise, professional pushback explaining your reasoning. Commit and push any code changes to the same branch. Write a response summary to `{SPEC_FOLDER}/06-pr-review-response-final.md` (append if it already exists) listing each comment and how it was handled."
+   Group PR links by phase.
 
-     b. Read `{SPEC_FOLDER}/06-pr-review-response-final.md`. Present each comment and its resolution.
+3. **Handle the epic branch** (final PR):
+   - Ask user — Option A (create final PR now) or Option B (wait for sub-PRs to merge first).
+   - `gh pr create --base {BASE_BRANCH} --title "{spec title}" --body "$(cat {SPEC_FOLDER}/06-pr-summary.md)"`.
+   - **GitHub merge checkpoint** for final PR — same loop as sub-PRs.
 
-     c. If any comments required user clarification: ask, re-launch SE with answers, repeat from (a).
+4. Stage and commit the spec folder (audit trail + ADRs): `docs: add spec audit trail and ADRs for {id}-{slug}`. Push.
 
-     d. Loop back to the checkpoint until the user replies "merged" / "done".
-
-     **This loop repeats until the user confirms the merge.**
-
-4. **Stage and commit the spec folder**:
-   - Stage the spec folder (audit trail + ADRs).
-   - Commit: `docs: add spec audit trail and ADRs for {id}-{slug}`
-   - Push.
-
-5. **Present results**: All PR links, phase grouping, deployment plan summary, remaining cycles.
+5. Present results: PR links by phase, deployment plan summary, remaining cycles.
 
 6. **Mark all todos complete.**
 
+---
 
 ### Branching Rules
 
-- **Major (single-phase)**: `epic/{id}-{slug}` → PR to `{BASE_BRANCH}` (default: `main`)
-- **Major (multi-phase)**: Epic branch `epic/{id}-{slug}`. Sub-branches `epic/{id}-{slug}/pr-N-{desc}` → PRs to `epic/{id}-{slug}`. Final PR: `epic/{id}-{slug}` → `{BASE_BRANCH}`.
-- **NEVER** push directly to `main`, `master`, or any shared branch unless the user explicitly requests it.
+- **Major (single-phase)**: `epic/{id}-{slug}` → PR to `{BASE_BRANCH}`.
+- **Major (multi-phase)**: epic branch `epic/{id}-{slug}`. Sub-branches `epic/{id}-{slug}/pr-N-{desc}` → PRs to `epic/{id}-{slug}`. Final PR: `epic/{id}-{slug}` → `{BASE_BRANCH}`.
+- **NEVER** push directly to shared branches unless explicitly requested.
 
 ---
 
 ## Error Recovery
 
-- **Agent fails or returns incomplete output**: Inform the user. Offer to re-launch or proceed manually.
-- **SA rejects the plan**: Expected workflow. SE revises plan, SA re-reviews. User can override.
-- **TL rejects the plan**: Expected workflow. SE revises plan, TL re-reviews. User can override.
-- **Both SA and TL reject**: Both issues must be addressed. SE revises addressing both sets of feedback.
-- **Tests fail during implementation**: Document in test report. Discuss at checkpoint.
-- **Quality gate rejects**: Loop back to Phase 4 with specific fixes.
-- **Cross-service integration issues**: SA's quality gate review catches these. May require changes to multiple sub-PRs.
-- **Infrastructure issues**: DevOps's quality gate review catches these. May require infra PR revisions.
-- **User wants to stop mid-workflow**: All documents are preserved. User can resume later.
-- **DevOps finds deployment blocker late**: Present to user. If blocking, loop back. May require SA re-assessment.
+- **Agent fails**: inform user; offer re-launch or manual.
+- **SA rejects plan**: SE revises; SA re-reviews. Override via user.
+- **TL rejects plan**: SE revises; TL re-reviews. Override via user.
+- **Both reject**: address both sets of feedback before re-review.
+- **Tests fail**: document; discuss at checkpoint.
+- **Quality gate rejects**: loop to Phase 4 with specific fixes.
+- **Cross-service integration issues**: SA quality gate catches these; may require multi-PR changes.
+- **Infrastructure issues**: DevOps quality gate catches these; may require infra PR revisions.
+- **DevOps finds blocker late**: present; if blocking, loop back; may require SA re-assessment.
+- **User wants to stop**: spec folder preserved; resume later.
