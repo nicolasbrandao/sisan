@@ -159,6 +159,16 @@ The `/sisan` command acts as the **orchestrator**: it runs agents one at a time 
 - **Verdicts can block progress** — Tech Lead and Software Architect can reject plans before a single line of production code is written.
 - **Full audit trail** — a `specs/` folder is created for every run with all decisions documented.
 
+### Output Discipline
+
+Sisan deliberately constrains every artifact so spec folders read like reference docs, not novels:
+
+- **Inline length budgets** — every output template carries explicit `[≤N bullets]` / `[≤N sentences]` / `Target: ≤N lines` markers in section headers, so generated docs stay terse.
+- **Tables over narrative** — discovery, planning, and review docs use tables for anything multi-attribute (file paths, AC coverage, migration plans, contract specs).
+- **No restatement** — agents reference section IDs (e.g., `AC-2`, `plan §Approach`) instead of re-narrating prior docs at the top of every artifact.
+- **Per-phase input manifests** — each workflow phase declares which docs each agent reads, so prompts stay short and downstream agents don't reload everything upstream.
+- **Deterministic PR summary** — the final PR description is extracted verbatim from existing artifacts; no extra agent invocation, no paraphrasing.
+
 ---
 
 ## Agent Team
@@ -217,15 +227,15 @@ The simplest tier. Three agents, one PR, full documentation.
 │           │                       → cross-review each other's findings  │
 │  Phase 3 │ Planning             SE + QA create plans (parallel)         │
 │           │                       → cross-review each other's plans     │
-│  Phase 4 │ Implementation       SE writes code · QA writes tests        │
-│  Phase 5 │ Quality Gates        QA validates against spec               │
-│           │                       → SE reviews test coverage            │
-│  Phase 6 │ Merge                PR created with full audit trail        │
+│  Phase 4 │ Implementation (TDD) SE scaffolds → QA writes failing tests  │
+│           │                       → SE makes them pass → cross-review   │
+│  Phase 5 │ Quality Gates        QA validates spec; SE reviews tests     │
+│  Phase 6 │ Merge                PR with deterministic summary extract   │
 └─────────────────────────────────────────────────────────────────────────┘
                         ↕ User approval required between every phase
 ```
 
-**Produces:** 9 documents in `specs/{id}-{slug}/`
+**Produces:** ~13 documents in `specs/{id}-{slug}/`
 
 ---
 
@@ -243,8 +253,8 @@ Adds a Tech Lead with a **blocking planning verdict** and optional UI/UX + DBA p
 │  Phase 3   │ Planning           SE + QA plan (parallel)                 │
 │             │                     → cross-review → UI/UX reviews SE     │
 │             │                     → TL renders VERDICT ◀ can block      │
-│  Phase 4   │ Implementation     SE code + QA tests, per sub-PR          │
-│  Phase 5   │ Quality Gates      QA + SE + TL + UI/UX [conditional]      │
+│  Phase 4   │ Implementation (TDD) Scaffold → Red → Green per sub-PR     │
+│  Phase 5   │ Quality Gates      QA + SE + TL + UI/UX + DBA [conditional]│
 │  Phase 6   │ Merge              Sub-PRs → feature branch → main         │
 └─────────────────────────────────────────────────────────────────────────┘
                         ↕ User approval required between every phase
@@ -253,7 +263,7 @@ Adds a Tech Lead with a **blocking planning verdict** and optional UI/UX + DBA p
 > **Tech Lead Verdict options:** `APPROVED` / `APPROVED WITH CHANGES` / `REJECTED`
 > A `REJECTED` verdict sends the plan back to the SE for revision before any code is written.
 
-**Produces:** Up to 14 documents in `specs/{id}-{slug}/`
+**Produces:** Up to ~22 documents in `specs/{id}-{slug}/`
 
 ---
 
@@ -274,8 +284,8 @@ The full team. **Dual blocking verdicts** from both the Software Architect (syst
 │             │                       → cross-review                      │
 │             │                       → SA renders SYSTEM VERDICT ◀ block │
 │             │                       → TL renders CODE VERDICT   ◀ block │
-│  Phase 4   │ Implementation       SE + DevOps code + QA tests, phased  │
-│  Phase 5   │ Quality Gates        QA + SE + TL + SA + UI/UX + DevOps   │
+│  Phase 4   │ Implementation (TDD) Scaffold → Red → Green, phased PRs   │
+│  Phase 5   │ Quality Gates        QA + SE + TL + SA + UI + DevOps + DBA│
 │  Phase 6   │ Merge                Sub-PRs → epic branch → main          │
 └─────────────────────────────────────────────────────────────────────────┘
                         ↕ User approval required between every phase
@@ -283,7 +293,7 @@ The full team. **Dual blocking verdicts** from both the Software Architect (syst
 
 > **Dual blocking verdicts:** The most restrictive verdict wins. If SA says `REJECTED` and TL says `APPROVED`, implementation is blocked.
 
-**Produces:** Up to 21 documents in `specs/{id}-{slug}/`
+**Produces:** Up to ~28 documents in `specs/{id}-{slug}/`
 
 ---
 
@@ -332,66 +342,86 @@ main
 
 Every run creates a numbered folder under `./specs/` with a complete audit trail:
 
-### Patch (9 documents)
+### Patch (~13 documents)
 
 ```
 specs/001-fix-login-timeout/
 ├── 01-spec.md                   # PM specification + acceptance criteria
 ├── 02-discovery-se.md           # SE codebase discovery + cross-review notes
 ├── 02-discovery-qa.md           # QA test infrastructure discovery + cross-review
-├── 03-plan-se.md                # SE implementation plan + cross-review notes
+├── 03-plan-se.md                # SE implementation plan (incl. Interface Contract)
 ├── 03-plan-qa.md                # QA test plan + cross-review notes
-├── 04-implementation-summary.md # SE implementation summary
-├── 04-test-report.md            # QA test report
-├── 05-quality-gate.md           # Quality gate (QA + SE sections)
-└── 06-pr-summary.md             # PR description
+├── 04-scaffold-summary.md       # SE stubs (TDD scaffold phase)
+├── 04-tdd-red-report.md         # QA failing tests (TDD red phase) + cross-review
+├── 04-implementation-summary.md # SE business logic (TDD green phase) + cross-review
+├── 04-test-report.md            # Consolidated test report
+├── 05-quality-gate-se.md        # SE test review (intermediate, merged below)
+├── 05-quality-gate.md           # Final quality gate (QA verdict + SE test review)
+├── 06-pr-summary.md             # Deterministic extract from prior docs
+└── 07-docs-wrap-up.md           # Post-merge docs update report
 ```
 
-### Minor (up to 14 documents)
+### Minor (up to ~22 documents)
 
 ```
 specs/002-add-user-profile/
 ├── 01-spec.md                   # PM specification
-├── 01-spec-ui-review.md         # UI/UX spec review [conditional]
+├── 01-spec-ui-review.md         # UI/UX spec review [conditional: UI changes]
+├── 01-spec-db-review.md         # DBA spec review     [conditional: DB changes]
 ├── 02-discovery-se.md           # SE discovery + cross-review
 ├── 02-discovery-qa.md           # QA discovery + cross-review
-├── 02-discovery-ui.md           # UI/UX discovery [conditional]
+├── 02-discovery-ui.md           # UI/UX discovery     [conditional]
+├── 02-discovery-db.md           # DBA discovery       [conditional]
 ├── 02-discovery-tl.md           # Tech Lead discovery review
-├── 03-plan-se.md                # SE plan + cross-review
+├── 03-plan-se.md                # SE plan + cross-review (incl. Interface Contract)
 ├── 03-plan-qa.md                # QA plan + cross-review
-├── 03-plan-ui-review.md         # UI/UX plan review [conditional]
+├── 03-plan-db.md                # DBA plan            [conditional]
+├── 03-plan-ui-review.md         # UI/UX plan review   [conditional]
 ├── 03-plan-tl.md                # Tech Lead plan review + VERDICT
-├── 04-implementation-summary.md # SE implementation summary
-├── 04-test-report.md            # QA test report
-├── 05-quality-gate.md           # Quality gate (QA + SE + TL + UI/UX)
-└── 06-pr-summary.md             # PR description
+├── 04-scaffold-summary.md       # SE stubs (TDD scaffold phase)
+├── 04-tdd-red-report.md         # QA failing tests (TDD red phase)
+├── 04-implementation-summary.md # SE business logic (TDD green phase) + cross-review
+├── 04-test-report.md            # Consolidated test report
+├── 04-db-summary.md             # DBA implementation  [conditional]
+├── 05-quality-gate-se.md        # SE test review (intermediate)
+├── 05-quality-gate.md           # Quality gate (QA + SE + TL + UI + DBA)
+├── 06-pr-summary.md             # Deterministic extract
+└── 07-docs-wrap-up.md           # Post-merge docs update
 ```
 
-### Major (up to 21 documents)
+### Major (up to ~28 documents)
 
 ```
 specs/003-new-auth-system/
-├── 01-spec.md                   # PM specification (UI + Infra + Cross-Service sections)
-├── 01-spec-ui-review.md         # UI/UX spec review [conditional]
+├── 01-spec.md                   # PM specification (UI + DB + Infra + Cross-Service)
+├── 01-spec-ui-review.md         # UI/UX spec review     [conditional]
+├── 01-spec-db-review.md         # DBA spec review       [conditional]
 ├── 01-spec-arch-review.md       # SA architecture spec review (always)
-├── 01-spec-infra-review.md      # DevOps infra spec review [conditional]
+├── 01-spec-infra-review.md      # DevOps spec review    [conditional]
 ├── 02-discovery-se.md           # SE discovery + cross-review
 ├── 02-discovery-qa.md           # QA discovery + cross-review
-├── 02-discovery-ui.md           # UI/UX discovery [conditional]
+├── 02-discovery-ui.md           # UI/UX discovery       [conditional]
+├── 02-discovery-db.md           # DBA discovery         [conditional]
 ├── 02-discovery-sa.md           # SA discovery + cross-review
-├── 02-discovery-devops.md       # DevOps discovery [conditional]
+├── 02-discovery-devops.md       # DevOps discovery      [conditional]
 ├── 02-discovery-tl.md           # TL discovery review
-├── 03-plan-se.md                # SE plan + cross-review
+├── 03-plan-se.md                # SE plan + cross-review (incl. Interface Contract)
 ├── 03-plan-qa.md                # QA plan + cross-review
 ├── 03-plan-sa.md                # SA plan + API contracts + ADRs + SYSTEM VERDICT
-├── 03-plan-devops.md            # DevOps infra plan [conditional]
-├── 03-plan-ui-review.md         # UI/UX plan review [conditional]
+├── 03-plan-db.md                # DBA plan              [conditional]
+├── 03-plan-devops.md            # DevOps plan           [conditional]
+├── 03-plan-ui-review.md         # UI/UX plan review     [conditional]
 ├── 03-plan-tl.md                # TL plan review + CODE VERDICT
-├── 04-implementation-summary.md # SE implementation summary
-├── 04-test-report.md            # QA test report
-├── 04-infra-summary.md          # DevOps infra summary [conditional]
-├── 05-quality-gate.md           # Quality gate (QA + SE + TL + SA + UI/UX + DevOps)
-└── 06-pr-summary.md             # PR description + ADRs
+├── 04-scaffold-summary.md       # SE stubs (TDD scaffold phase)
+├── 04-tdd-red-report.md         # QA failing tests (TDD red phase)
+├── 04-implementation-summary.md # SE business logic (TDD green phase) + cross-review
+├── 04-test-report.md            # Consolidated test report
+├── 04-db-summary.md             # DBA implementation    [conditional]
+├── 04-infra-summary.md          # DevOps implementation [conditional]
+├── 05-quality-gate-se.md        # SE test review (intermediate)
+├── 05-quality-gate.md           # Quality gate (QA + SE + TL + SA + UI + DevOps + DBA)
+├── 06-pr-summary.md             # Deterministic extract + ADRs + Deployment Plan
+└── 07-docs-wrap-up.md           # Post-merge docs update
 ```
 
 ---
